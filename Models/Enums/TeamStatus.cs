@@ -2,8 +2,11 @@
 {
     public enum TeamStatus
     {
-        Pending = 0,
-        Approved = 1,
-        Eliminated = 2
+        Pending,
+        Approved,
+        Active,
+        Eliminated,
+        Withdrawn,
+        Champion
     }
 }

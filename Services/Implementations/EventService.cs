@@ -19,8 +19,9 @@ namespace SEAL.NET.Services.Implementations
         public async Task<List<EventResponseDto>> GetAllEventsAsync()
         {
             var events = await _eventRepository.GetEventsWithDetailsAsync();
-            return events.Select(e => MapToDto(e)).ToList();
+            return events.Select(MapToDto).ToList();
         }
+
 
         public async Task<EventResponseDto?> GetEventByIdAsync(Guid id)
         {
@@ -45,12 +46,12 @@ namespace SEAL.NET.Services.Implementations
 
             await _eventRepository.AddAsync(newEvent);
             await _eventRepository.SaveChangesAsync();
-            return (true, "Created successfully", newEvent.EventId);
+            return (true, "Created successfully.", newEvent.EventId);
         }
 
         public async Task<(bool Success, string Message)> UpdateEventAsync(Guid id, UpdateEventRequest request)
         {
-            var eventItem = await _eventRepository.GetByIdAsync(id);
+            var eventItem = await _eventRepository.GetEventDetailAsync(id);
             if (eventItem == null) return (false, "Event not found.");
 
             if (request.EndDate <= request.StartDate)
@@ -64,7 +65,7 @@ namespace SEAL.NET.Services.Implementations
 
             _eventRepository.Update(eventItem);
             await _eventRepository.SaveChangesAsync();
-            return (true, "Updated successfully");
+            return (true, "Updated successfully.");
         }
 
         public async Task<(bool Success, string Message)> DeleteEventAsync(Guid id)
@@ -77,34 +78,34 @@ namespace SEAL.NET.Services.Implementations
 
             _eventRepository.Delete(eventItem);
             await _eventRepository.SaveChangesAsync();
-            return (true, "Deleted successfully");
+            return (true, "Deleted successfully.");
         }
 
-        private EventResponseDto MapToDto(Event e)
+        private static EventResponseDto MapToDto(Event e) => new()
         {
-            return new EventResponseDto
+            EventId = e.EventId,
+            EventName = e.EventName,
+            Description = e.Description,
+            StartDate = e.StartDate,
+            EndDate = e.EndDate,
+            Status = e.Status.ToString(),
+            Categories = e.Categories.Select(c => new CategoryDto
             {
-                EventId = e.EventId,
-                EventName = e.EventName,
-                Description = e.Description,
-                StartDate = e.StartDate,
-                EndDate = e.EndDate,
-                Status = e.Status.ToString(),
-                Categories = e.Categories.Select(c => new CategoryDto
-                {
-                    CategoryId = c.CategoryId,
-                    CategoryName = c.CategoryName,
-                    Description = c.Description
-                }).ToList(),
-                Rounds = e.Rounds.OrderBy(r => r.RoundOrder).Select(r => new RoundDto
+                CategoryId = c.CategoryId,
+                CategoryName = c.CategoryName,
+                Description = c.Description,
+                TeamCount = c.Teams.Count
+            }).ToList(),
+            Rounds = e.Rounds
+                .OrderBy(r => r.RoundOrder)
+                .Select(r => new RoundDto
                 {
                     RoundId = r.RoundId,
                     RoundName = r.RoundName,
-                    SubmissionDeadline = r.SubmissionDeadline,
                     RoundOrder = r.RoundOrder,
-                    MaxTeamsAdvancing = r.MaxTeamsAdvancing
+                    MaxTeamsAdvancing = r.MaxTeamsAdvancing,
+                    SubmissionDeadline = r.SubmissionDeadline
                 }).ToList()
-            };
-        }
+        };
     }
 }

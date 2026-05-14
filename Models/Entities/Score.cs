@@ -12,7 +12,7 @@ namespace SEAL.NET.Models.Entities
         public Guid CriteriaId { get; set; }
 
         [Column(TypeName = "decimal(5,2)")]
-        public decimal ScoreValue { get; set; }
+        public decimal ScoreValue { get; set; }   
         public string? Comment { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

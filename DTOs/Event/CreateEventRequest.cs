@@ -1,13 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
-using SEAL.NET.Models.Enums;
+﻿using SEAL.NET.Models.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace SEAL.NET.DTOs.Event
 {
     public class CreateEventRequest
     {
-        [Required, MaxLength(150)]
+        [Required]
+        [MaxLength(200)]
         public string EventName { get; set; } = string.Empty;
 
+        [MaxLength(1000)]
         public string? Description { get; set; }
 
         [Required]
