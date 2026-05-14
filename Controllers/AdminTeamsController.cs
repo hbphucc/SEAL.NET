@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEAL.NET.Data;
 using SEAL.NET.Models.Enums;
+using SEAL.NET.DTOs.Team;
 
 namespace SEAL.NET.Controllers
 {
@@ -87,6 +88,49 @@ namespace SEAL.NET.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Team rejected successfully." });
+        }
+        [HttpPut("{teamId}/eliminate")]
+        public async Task<IActionResult> EliminateTeam(Guid teamId, [FromBody] EliminateTeamRequest request)
+        {
+            var team = await _context.Teams
+                .Include(t => t.Category)
+                .Include(t => t.CurrentRound)
+                .FirstOrDefaultAsync(t => t.TeamId == teamId);
+
+            if (team == null)
+                return NotFound(new { message = "Team not found." });
+
+            if (team.Status == TeamStatus.Eliminated)
+                return BadRequest(new { message = "Team is already eliminated." });
+
+            team.Status = TeamStatus.Eliminated;
+            team.EliminationReason = request.Reason;
+            team.EliminatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Team eliminated successfully.",
+                team = new
+                {
+                    team.TeamId,
+                    team.TeamName,
+                    status = team.Status.ToString(),
+                    team.EliminationReason,
+                    team.EliminatedAt,
+                    category = team.Category == null ? null : new
+                    {
+                        team.Category.CategoryId,
+                        team.Category.CategoryName
+                    },
+                    currentRound = team.CurrentRound == null ? null : new
+                    {
+                        team.CurrentRound.RoundId,
+                        team.CurrentRound.RoundName
+                    }
+                }
+            });
         }
     }
 }

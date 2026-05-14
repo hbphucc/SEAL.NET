@@ -31,5 +31,10 @@ namespace SEAL.NET.Models.Entities
 
         public ICollection<TeamMember> Members { get; set; } = new List<TeamMember>();
         public ICollection<Submission> Submissions { get; set; } = new List<Submission>();
+
+        [MaxLength(500)]
+        public string? EliminationReason { get; set; }
+
+        public DateTime? EliminatedAt { get; set; }
     }
 }
