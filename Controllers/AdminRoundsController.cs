@@ -100,6 +100,8 @@ namespace SEAL.NET.Controllers
                 foreach (var item in losers)
                 {
                     item.Team.Status = TeamStatus.Eliminated;
+                    item.Team.EliminationReason = "Eliminated after round ranking.";
+                    item.Team.EliminatedAt = DateTime.UtcNow;
 
                     eliminatedTeams.Add(new
                     {

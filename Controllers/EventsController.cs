@@ -1,170 +1,65 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SEAL.NET.Data;
 using SEAL.NET.DTOs.Event;
-using EventEntity = SEAL.NET.Models.Entities.Event;
+using SEAL.NET.Services.Interfaces;
 
 namespace SEAL.NET.Controllers
 {
-    [Route("api/events")]
     [ApiController]
+    [Route("api/events")]
     [Authorize(Roles = "Admin")]
     public class EventsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IEventService _eventService;
 
-        public EventsController(ApplicationDbContext context)
+        public EventsController(IEventService eventService)
         {
-            _context = context;
+            _eventService = eventService;
         }
 
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> GetEvents()
+        public async Task<IActionResult> GetAllEvents()
         {
-            var events = await _context.Events
-                .Include(e => e.Categories)
-                .Include(e => e.Rounds)
-                .OrderByDescending(e => e.CreatedAt)
-                .Select(e => new
-                {
-                    e.EventId,
-                    e.EventName,
-                    e.Description,
-                    e.StartDate,
-                    e.EndDate,
-                    Status = e.Status.ToString(),
-                    e.CreatedAt,
-                    Categories = e.Categories.Select(c => new
-                    {
-                        c.CategoryId,
-                        c.CategoryName,
-                        c.Description
-                    }),
-                    Rounds = e.Rounds
-                        .OrderBy(r => r.RoundOrder)
-                        .Select(r => new
-                        {
-                            r.RoundId,
-                            r.RoundName,
-                            r.SubmissionDeadline,
-                            r.RoundOrder,
-                            r.MaxTeamsAdvancing
-                        })
-                })
-                .ToListAsync();
-
-            return Ok(events);
+            var result = await _eventService.GetAllEventsAsync();
+            return Ok(result);
         }
 
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetEventById(Guid id)
         {
-            var eventItem = await _context.Events
-                .Include(e => e.Categories)
-                .Include(e => e.Rounds)
-                .Where(e => e.EventId == id)
-                .Select(e => new
-                {
-                    e.EventId,
-                    e.EventName,
-                    e.Description,
-                    e.StartDate,
-                    e.EndDate,
-                    Status = e.Status.ToString(),
-                    e.CreatedAt,
-                    Categories = e.Categories.Select(c => new
-                    {
-                        c.CategoryId,
-                        c.CategoryName,
-                        c.Description
-                    }),
-                    Rounds = e.Rounds
-                        .OrderBy(r => r.RoundOrder)
-                        .Select(r => new
-                        {
-                            r.RoundId,
-                            r.RoundName,
-                            r.SubmissionDeadline,
-                            r.RoundOrder,
-                            r.MaxTeamsAdvancing
-                        })
-                })
-                .FirstOrDefaultAsync();
+            var result = await _eventService.GetEventByIdAsync(id);
+            if (result == null) return NotFound(new { message = "Event not found." });
 
-            if (eventItem == null)
-                return NotFound(new { message = "Event not found." });
-
-            return Ok(eventItem);
+            return Ok(result);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateEvent([FromBody] CreateEventRequest request)
         {
-            if (request.EndDate <= request.StartDate)
-                return BadRequest(new { message = "EndDate must be greater than StartDate." });
+            var result = await _eventService.CreateEventAsync(request);
+            if (!result.Success) return BadRequest(new { message = result.Message });
 
-            var newEvent = new EventEntity
-            {
-                EventName = request.EventName,
-                Description = request.Description,
-                StartDate = request.StartDate,
-                EndDate = request.EndDate,
-                Status = request.Status
-            };
-
-            _context.Events.Add(newEvent);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetEventById), new { id = newEvent.EventId }, new
-            {
-                message = "Event created successfully.",
-                newEvent.EventId
-            });
+            return CreatedAtAction(nameof(GetEventById), new { id = result.Id }, new { message = result.Message, id = result.Id });
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] UpdateEventRequest request)
         {
-            var eventItem = await _context.Events.FindAsync(id);
+            var result = await _eventService.UpdateEventAsync(id, request);
+            if (!result.Success) return BadRequest(new { message = result.Message });
 
-            if (eventItem == null)
-                return NotFound(new { message = "Event not found." });
-
-            if (request.EndDate <= request.StartDate)
-                return BadRequest(new { message = "EndDate must be greater than StartDate." });
-
-            eventItem.EventName = request.EventName;
-            eventItem.Description = request.Description;
-            eventItem.StartDate = request.StartDate;
-            eventItem.EndDate = request.EndDate;
-            eventItem.Status = request.Status;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Event updated successfully." });
+            return Ok(new { message = result.Message });
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEvent(Guid id)
         {
-            var eventItem = await _context.Events
-                .Include(e => e.Categories)
-                .Include(e => e.Rounds)
-                .FirstOrDefaultAsync(e => e.EventId == id);
+            var result = await _eventService.DeleteEventAsync(id);
+            if (!result.Success) return BadRequest(new { message = result.Message });
 
-            if (eventItem == null)
-                return NotFound(new { message = "Event not found." });
-
-            if (eventItem.Categories.Any() || eventItem.Rounds.Any())
-                return BadRequest(new { message = "Cannot delete event that has categories or rounds." });
-
-            _context.Events.Remove(eventItem);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Event deleted successfully." });
+            return Ok(new { message = result.Message });
         }
     }
 }
