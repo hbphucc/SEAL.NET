@@ -4,8 +4,6 @@ namespace SEAL.NET.Models.Entities
     public class Submission
     {
         public Guid SubmissionId { get; set; } = Guid.NewGuid();
-        public string Title { get; set; } = string.Empty;
-        public string? FileUrl { get; set; }
         public string? RepositoryUrl { get; set; }
         public string? DemoUrl { get; set; }
         public string? SlideUrl { get; set; }

@@ -97,6 +97,14 @@ namespace SEAL.NET.Controllers
             if (otherWeights + request.Weight > 100)
                 return BadRequest(new { message = "Total criteria weight cannot exceed 100." });
 
+            var duplicate = await _context.Criteria.AnyAsync(c =>
+                c.RoundId == roundId &&
+                c.CriteriaId != criteriaId &&
+                c.CriteriaName.ToLower() == request.CriteriaName.ToLower());
+
+            if (duplicate)
+                return BadRequest(new { message = "Criteria name already exists in this round." });
+
             criteria.CriteriaName = request.CriteriaName;
             criteria.MaxScore = request.MaxScore;
             criteria.Weight = request.Weight;

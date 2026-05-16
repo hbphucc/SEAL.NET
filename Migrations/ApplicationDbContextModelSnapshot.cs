@@ -207,8 +207,19 @@ namespace SEAL.NET.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("SchoolName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StudentCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("StudentType")
+                        .HasColumnType("int");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
@@ -238,8 +249,7 @@ namespace SEAL.NET.Migrations
 
                     b.Property<string>("CategoryName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
@@ -262,8 +272,7 @@ namespace SEAL.NET.Migrations
 
                     b.Property<string>("CriteriaName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("MaxScore")
                         .HasColumnType("decimal(5,2)");
@@ -298,8 +307,7 @@ namespace SEAL.NET.Migrations
 
                     b.Property<string>("EventName")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
@@ -347,18 +355,20 @@ namespace SEAL.NET.Migrations
                     b.Property<Guid>("EventId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("IsRankingPublished")
+                        .HasColumnType("bit");
+
                     b.Property<int>("MaxTeamsAdvancing")
                         .HasColumnType("int");
 
                     b.Property<string>("RoundName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RoundOrder")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("SubmissionDeadline")
+                    b.Property<DateTime?>("SubmissionDeadline")
                         .HasColumnType("datetime2");
 
                     b.HasKey("RoundId");
@@ -404,6 +414,57 @@ namespace SEAL.NET.Migrations
                     b.ToTable("Scores");
                 });
 
+            modelBuilder.Entity("SEAL.NET.Models.Entities.ScoreAuditLog", b =>
+                {
+                    b.Property<Guid>("ScoreAuditLogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CriteriaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("JudgeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("NewComment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("NewScoreValue")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("OldComment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("OldScoreValue")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<Guid>("ScoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ScoreAuditLogId");
+
+                    b.HasIndex("CriteriaId");
+
+                    b.HasIndex("JudgeId");
+
+                    b.HasIndex("ScoreId");
+
+                    b.HasIndex("SubmissionId");
+
+                    b.ToTable("ScoreAuditLogs");
+                });
+
             modelBuilder.Entity("SEAL.NET.Models.Entities.Submission", b =>
                 {
                     b.Property<Guid>("SubmissionId")
@@ -411,19 +472,16 @@ namespace SEAL.NET.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("DemoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RepositoryUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("RoundId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("SlideUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("SubmittedAt")
                         .HasColumnType("datetime2");
@@ -435,7 +493,8 @@ namespace SEAL.NET.Migrations
 
                     b.HasIndex("RoundId");
 
-                    b.HasIndex("TeamId");
+                    b.HasIndex("TeamId", "RoundId")
+                        .IsUnique();
 
                     b.ToTable("Submissions");
                 });
@@ -459,8 +518,7 @@ namespace SEAL.NET.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("EliminationReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("LeaderId")
                         .HasColumnType("uniqueidentifier");
@@ -470,8 +528,7 @@ namespace SEAL.NET.Migrations
 
                     b.Property<string>("TeamName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("TeamId");
 
@@ -489,6 +546,9 @@ namespace SEAL.NET.Migrations
                     b.Property<Guid>("TeamMemberId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("TeamId")
                         .HasColumnType("uniqueidentifier");
@@ -640,6 +700,41 @@ namespace SEAL.NET.Migrations
                     b.Navigation("Criteria");
 
                     b.Navigation("Judge");
+
+                    b.Navigation("Submission");
+                });
+
+            modelBuilder.Entity("SEAL.NET.Models.Entities.ScoreAuditLog", b =>
+                {
+                    b.HasOne("SEAL.NET.Models.Entities.Criteria", "Criteria")
+                        .WithMany()
+                        .HasForeignKey("CriteriaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEAL.NET.Models.Entities.ApplicationUser", "Judge")
+                        .WithMany()
+                        .HasForeignKey("JudgeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEAL.NET.Models.Entities.Score", "Score")
+                        .WithMany()
+                        .HasForeignKey("ScoreId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEAL.NET.Models.Entities.Submission", "Submission")
+                        .WithMany()
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Criteria");
+
+                    b.Navigation("Judge");
+
+                    b.Navigation("Score");
 
                     b.Navigation("Submission");
                 });

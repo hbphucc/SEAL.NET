@@ -16,6 +16,15 @@ namespace SEAL.NET.Services.Implementations
             _eventRepository = eventRepository;
         }
 
+        private static DateTime ToUtc(DateTime value)
+        {
+            if (value.Kind == DateTimeKind.Unspecified)
+            {
+                throw new ArgumentException("DateTime must specify a timezone (e.g., append 'Z' for UTC).");
+            }
+            return value.ToUniversalTime();
+        }
+
         public async Task<List<EventResponseDto>> GetAllEventsAsync()
         {
             var events = await _eventRepository.GetEventsWithDetailsAsync();
@@ -32,15 +41,18 @@ namespace SEAL.NET.Services.Implementations
 
         public async Task<(bool Success, string Message, Guid? Id)> CreateEventAsync(CreateEventRequest request)
         {
-            if (request.EndDate <= request.StartDate)
+            var startDate = ToUtc(request.StartDate);
+            var endDate = ToUtc(request.EndDate);
+
+            if (endDate <= startDate)
                 return (false, "EndDate must be greater than StartDate.", null);
 
             var newEvent = new Event
             {
                 EventName = request.EventName,
                 Description = request.Description,
-                StartDate = request.StartDate,
-                EndDate = request.EndDate,
+                StartDate = startDate,
+                EndDate = endDate,
                 Status = request.Status
             };
 
@@ -54,13 +66,16 @@ namespace SEAL.NET.Services.Implementations
             var eventItem = await _eventRepository.GetEventDetailAsync(id);
             if (eventItem == null) return (false, "Event not found.");
 
-            if (request.EndDate <= request.StartDate)
+            var startDate = ToUtc(request.StartDate);
+            var endDate = ToUtc(request.EndDate);
+
+            if (endDate <= startDate)
                 return (false, "EndDate must be greater than StartDate.");
 
             eventItem.EventName = request.EventName;
             eventItem.Description = request.Description;
-            eventItem.StartDate = request.StartDate;
-            eventItem.EndDate = request.EndDate;
+            eventItem.StartDate = startDate;
+            eventItem.EndDate = endDate;
             eventItem.Status = request.Status;
 
             _eventRepository.Update(eventItem);

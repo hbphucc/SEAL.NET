@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEAL.NET.Data;
-using SEAL.NET.Models.Enums;
 using SEAL.NET.DTOs.Team;
+using SEAL.NET.Models.Entities;
+using SEAL.NET.Models.Enums;
 
 namespace SEAL.NET.Controllers
 {
@@ -13,10 +15,31 @@ namespace SEAL.NET.Controllers
     public class AdminTeamsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public AdminTeamsController(ApplicationDbContext context)
+        public AdminTeamsController(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
+        }
+
+        private async Task RemoveTeamLeaderRoleIfNoApprovedTeamsAsync(Guid leaderId)
+        {
+            var hasApprovedTeam = await _context.Teams.AnyAsync(t =>
+                t.LeaderId == leaderId &&
+                t.Status == TeamStatus.Approved);
+
+            if (hasApprovedTeam)
+                return;
+
+            var leader = await _userManager.FindByIdAsync(leaderId.ToString());
+            if (leader == null || !await _userManager.IsInRoleAsync(leader, "TeamLeader"))
+                return;
+
+            await _userManager.RemoveFromRoleAsync(leader, "TeamLeader");
+            await _userManager.UpdateSecurityStampAsync(leader);
         }
 
         [HttpGet]
@@ -32,6 +55,10 @@ namespace SEAL.NET.Controllers
                 {
                     t.TeamId,
                     t.TeamName,
+                    t.LeaderId,
+                    t.CreatedAt,
+                    t.EliminationReason,
+                    t.EliminatedAt,
                     status = t.Status.ToString(),
                     category = new
                     {
@@ -70,6 +97,13 @@ namespace SEAL.NET.Controllers
 
             team.Status = TeamStatus.Approved;
 
+            var leader = await _userManager.FindByIdAsync(team.LeaderId.ToString());
+            if (leader != null && !await _userManager.IsInRoleAsync(leader, "TeamLeader"))
+            {
+                await _userManager.AddToRoleAsync(leader, "TeamLeader");
+                await _userManager.UpdateSecurityStampAsync(leader);
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Team approved successfully." });
@@ -86,6 +120,7 @@ namespace SEAL.NET.Controllers
             team.Status = TeamStatus.Eliminated;
 
             await _context.SaveChangesAsync();
+            await RemoveTeamLeaderRoleIfNoApprovedTeamsAsync(team.LeaderId);
 
             return Ok(new { message = "Team rejected successfully." });
         }
@@ -108,6 +143,7 @@ namespace SEAL.NET.Controllers
             team.EliminatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await RemoveTeamLeaderRoleIfNoApprovedTeamsAsync(team.LeaderId);
 
             return Ok(new
             {
@@ -131,6 +167,28 @@ namespace SEAL.NET.Controllers
                     }
                 }
             });
+        }
+
+        [HttpDelete("{teamId}")]
+        public async Task<IActionResult> DeleteTeam(Guid teamId)
+        {
+            var team = await _context.Teams
+                .Include(t => t.Submissions)
+                .FirstOrDefaultAsync(t => t.TeamId == teamId);
+
+            if (team == null)
+                return NotFound(new { message = "Team not found." });
+
+            if (team.Submissions.Any())
+                return BadRequest(new { message = "Cannot delete team because it already has submissions." });
+
+            var leaderId = team.LeaderId;
+
+            _context.Teams.Remove(team);
+            await _context.SaveChangesAsync();
+            await RemoveTeamLeaderRoleIfNoApprovedTeamsAsync(leaderId);
+
+            return Ok(new { message = "Team deleted successfully." });
         }
     }
 }

@@ -13,6 +13,7 @@ namespace SEAL.NET.DTOs.Round
         [Required]
         public int RoundOrder { get; set; }
 
+        [Range(1, 100)]
         public int MaxTeamsAdvancing { get; set; } = 0;
     }
 }

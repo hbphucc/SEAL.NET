@@ -5,7 +5,6 @@ namespace SEAL.NET.Models.Entities
     public class TeamMember
     {
         public Guid TeamMemberId { get; set; } = Guid.NewGuid();
-        public string Role { get; set; } = string.Empty;
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
 
         public Guid TeamId { get; set; }

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEAL.NET.Data;
@@ -24,6 +24,13 @@ namespace SEAL.NET.Controllers
         private Guid GetCurrentUserId()
         {
             return Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        }
+
+        private static DateTime PersistedUtc(DateTime value)
+        {
+            return value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
+                : value.ToUniversalTime();
         }
 
         [HttpPost]
@@ -52,7 +59,12 @@ namespace SEAL.NET.Controllers
             if (round == null)
                 return NotFound(new { message = "Round not found." });
 
-            if (DateTime.UtcNow > round.SubmissionDeadline)
+            if (round.SubmissionDeadline == null)
+                return BadRequest(new { message = "This round has no submission deadline configured." });
+
+            var submissionDeadline = PersistedUtc(round.SubmissionDeadline.Value);
+
+            if (DateTime.UtcNow > submissionDeadline)
                 return BadRequest(new { message = "Submission deadline has passed." });
 
             var existingSubmission = await _context.Submissions
@@ -106,14 +118,32 @@ namespace SEAL.NET.Controllers
                 return NotFound(new { message = "Team not found." });
 
             var isMember = team.Members.Any(m => m.UserId == currentUserId);
-            var isAdminOrJudge = User.IsInRole("Admin") || User.IsInRole("Judge");
+            var isAdmin = User.IsInRole("Admin");
+            var isJudge = User.IsInRole("Judge");
 
-            if (!isMember && !isAdminOrJudge)
+            if (!isMember && !isAdmin && !isJudge)
                 return Forbid();
 
-            var submissions = await _context.Submissions
+            var submissionsQuery = _context.Submissions
                 .Include(s => s.Round)
-                .Where(s => s.TeamId == teamId)
+                .Where(s => s.TeamId == teamId);
+
+            if (isJudge && !isAdmin && !isMember)
+            {
+                var assignedRoundIds = await _context.JudgeAssignments
+                    .Where(a =>
+                        a.JudgeId == currentUserId &&
+                        a.CategoryId == team.CategoryId)
+                    .Select(a => a.RoundId)
+                    .ToListAsync();
+
+                if (!assignedRoundIds.Any())
+                    return Forbid();
+
+                submissionsQuery = submissionsQuery.Where(s => assignedRoundIds.Contains(s.RoundId));
+            }
+
+            var submissions = await submissionsQuery
                 .OrderByDescending(s => s.SubmittedAt)
                 .Select(s => new
                 {
@@ -137,10 +167,29 @@ namespace SEAL.NET.Controllers
         [Authorize(Roles = "Admin,Judge")]
         public async Task<IActionResult> GetRoundSubmissions(Guid roundId)
         {
-            var submissions = await _context.Submissions
+            var submissionsQuery = _context.Submissions
                 .Include(s => s.Team)
                     .ThenInclude(t => t.Category)
-                .Where(s => s.RoundId == roundId)
+                .Where(s => s.RoundId == roundId);
+
+            if (User.IsInRole("Judge") && !User.IsInRole("Admin"))
+            {
+                var judgeId = GetCurrentUserId();
+                var assignedCategoryIds = await _context.JudgeAssignments
+                    .Where(a =>
+                        a.JudgeId == judgeId &&
+                        a.RoundId == roundId)
+                    .Select(a => a.CategoryId)
+                    .ToListAsync();
+
+                if (!assignedCategoryIds.Any())
+                    return Forbid();
+
+                submissionsQuery = submissionsQuery
+                    .Where(s => assignedCategoryIds.Contains(s.Team!.CategoryId));
+            }
+
+            var submissions = await submissionsQuery
                 .Select(s => new
                 {
                     s.SubmissionId,

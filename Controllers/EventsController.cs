@@ -35,7 +35,16 @@ namespace SEAL.NET.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateEvent([FromBody] CreateEventRequest request)
         {
-            var result = await _eventService.CreateEventAsync(request);
+            (bool Success, string Message, Guid? Id) result;
+            try
+            {
+                result = await _eventService.CreateEventAsync(request);
+            }
+            catch (ArgumentException)
+            {
+                return BadRequest(new { message = "Datetime must include UTC or timezone offset." });
+            }
+
             if (!result.Success) return BadRequest(new { message = result.Message });
             return CreatedAtAction(nameof(GetEventById), new { id = result.Id }, new { id = result.Id });
         }
@@ -44,7 +53,19 @@ namespace SEAL.NET.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] UpdateEventRequest request)
         {
-            var result = await _eventService.UpdateEventAsync(id, request);
+            (bool Success, string Message) result;
+            try
+            {
+                result = await _eventService.UpdateEventAsync(id, request);
+            }
+            catch (ArgumentException)
+            {
+                return BadRequest(new { message = "Datetime must include UTC or timezone offset." });
+            }
+
+            if (!result.Success && result.Message == "Event not found.")
+                return NotFound(new { message = result.Message });
+
             if (!result.Success) return BadRequest(new { message = result.Message });
             return Ok(new { message = result.Message });
         }
@@ -54,6 +75,9 @@ namespace SEAL.NET.Controllers
         public async Task<IActionResult> DeleteEvent(Guid id)
         {
             var result = await _eventService.DeleteEventAsync(id);
+            if (!result.Success && result.Message == "Event not found.")
+                return NotFound(new { message = result.Message });
+
             if (!result.Success) return BadRequest(new { message = result.Message });
             return Ok(new { message = result.Message });
         }

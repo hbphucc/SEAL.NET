@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SEAL.NET.Data;
@@ -17,6 +17,23 @@ namespace SEAL.NET.Controllers
         public RoundsController(ApplicationDbContext context)
         {
             _context = context;
+        }
+
+        private static DateTime RequireInputUtc(DateTime value)
+        {
+            if (value.Kind == DateTimeKind.Unspecified)
+            {
+                throw new ArgumentException("DateTime must specify a timezone (e.g., append 'Z' for UTC).");
+            }
+
+            return value.ToUniversalTime();
+        }
+
+        private static DateTime PersistedUtc(DateTime value)
+        {
+            return value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
+                : value.ToUniversalTime();
         }
 
         [HttpGet]
@@ -75,7 +92,20 @@ namespace SEAL.NET.Controllers
             if (eventItem == null)
                 return NotFound(new { message = "Event not found." });
 
-            if (request.SubmissionDeadline < eventItem.StartDate || request.SubmissionDeadline > eventItem.EndDate)
+            DateTime submissionDeadline;
+            try
+            {
+                submissionDeadline = RequireInputUtc(request.SubmissionDeadline);
+            }
+            catch (ArgumentException)
+            {
+                return BadRequest(new { message = "Datetime must include UTC or timezone offset." });
+            }
+
+            var eventStartDate = PersistedUtc(eventItem.StartDate);
+            var eventEndDate = PersistedUtc(eventItem.EndDate);
+
+            if (submissionDeadline < eventStartDate || submissionDeadline > eventEndDate)
                 return BadRequest(new { message = "SubmissionDeadline must be within event date range." });
 
             var duplicateOrder = await _context.Rounds.AnyAsync(r =>
@@ -89,7 +119,7 @@ namespace SEAL.NET.Controllers
             {
                 EventId = eventId,
                 RoundName = request.RoundName,
-                SubmissionDeadline = request.SubmissionDeadline,
+                SubmissionDeadline = submissionDeadline,
                 RoundOrder = request.RoundOrder,
                 MaxTeamsAdvancing = request.MaxTeamsAdvancing
             };
@@ -122,7 +152,20 @@ namespace SEAL.NET.Controllers
             if (eventItem == null)
                 return NotFound(new { message = "Event not found." });
 
-            if (request.SubmissionDeadline < eventItem.StartDate || request.SubmissionDeadline > eventItem.EndDate)
+            DateTime submissionDeadline;
+            try
+            {
+                submissionDeadline = RequireInputUtc(request.SubmissionDeadline);
+            }
+            catch (ArgumentException)
+            {
+                return BadRequest(new { message = "Datetime must include UTC or timezone offset." });
+            }
+
+            var eventStartDate = PersistedUtc(eventItem.StartDate);
+            var eventEndDate = PersistedUtc(eventItem.EndDate);
+
+            if (submissionDeadline < eventStartDate || submissionDeadline > eventEndDate)
                 return BadRequest(new { message = "SubmissionDeadline must be within event date range." });
 
             var duplicateOrder = await _context.Rounds.AnyAsync(r =>
@@ -134,7 +177,7 @@ namespace SEAL.NET.Controllers
                 return BadRequest(new { message = "RoundOrder already exists in this event." });
 
             round.RoundName = request.RoundName;
-            round.SubmissionDeadline = request.SubmissionDeadline;
+            round.SubmissionDeadline = submissionDeadline;
             round.RoundOrder = request.RoundOrder;
             round.MaxTeamsAdvancing = request.MaxTeamsAdvancing;
 

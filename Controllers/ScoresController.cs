@@ -25,6 +25,35 @@ namespace SEAL.NET.Controllers
             return Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         }
 
+        private static IActionResult? RejectIfRankingPublished(Submission submission)
+        {
+            return submission.Round?.IsRankingPublished == true
+                ? new ConflictObjectResult(new { message = "Scores cannot be changed after ranking is published for this round." })
+                : null;
+        }
+
+        private void AddScoreAuditLog(
+            Score score,
+            string action,
+            decimal? oldScoreValue,
+            string? oldComment,
+            decimal newScoreValue,
+            string? newComment)
+        {
+            _context.ScoreAuditLogs.Add(new ScoreAuditLog
+            {
+                ScoreId = score.ScoreId,
+                SubmissionId = score.SubmissionId,
+                JudgeId = score.JudgeId,
+                CriteriaId = score.CriteriaId,
+                Action = action,
+                OldScoreValue = oldScoreValue,
+                NewScoreValue = newScoreValue,
+                OldComment = oldComment,
+                NewComment = newComment
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> SubmitScore([FromBody] CreateScoreRequest request)
         {
@@ -37,6 +66,10 @@ namespace SEAL.NET.Controllers
 
             if (submission == null)
                 return NotFound(new { message = "Submission not found." });
+
+            var publishedResult = RejectIfRankingPublished(submission);
+            if (publishedResult != null)
+                return publishedResult;
 
             var criteria = await _context.Criteria
                 .FirstOrDefaultAsync(c =>
@@ -64,9 +97,20 @@ namespace SEAL.NET.Controllers
 
             if (existingScore != null)
             {
+                var oldScoreValue = existingScore.ScoreValue;
+                var oldComment = existingScore.Comment;
+
                 existingScore.ScoreValue = request.ScoreValue;
                 existingScore.Comment = request.Comment;
                 existingScore.CreatedAt = DateTime.UtcNow;
+
+                AddScoreAuditLog(
+                    existingScore,
+                    "Updated",
+                    oldScoreValue,
+                    oldComment,
+                    request.ScoreValue,
+                    request.Comment);
 
                 await _context.SaveChangesAsync();
 
@@ -83,9 +127,178 @@ namespace SEAL.NET.Controllers
             };
 
             _context.Scores.Add(score);
+            AddScoreAuditLog(
+                score,
+                "Created",
+                null,
+                null,
+                score.ScoreValue,
+                score.Comment);
+
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Score submitted successfully.", score.ScoreId });
+        }
+
+        [HttpPost("bulk")]
+        public async Task<IActionResult> SubmitBulkScores([FromBody] BulkScoreRequest request)
+        {
+            var judgeId = GetCurrentUserId();
+
+            var submission = await _context.Submissions
+                .Include(s => s.Team)
+                .Include(s => s.Round)
+                .FirstOrDefaultAsync(s => s.SubmissionId == request.SubmissionId);
+
+            if (submission == null)
+                return NotFound(new { message = "Submission not found." });
+
+            var publishedResult = RejectIfRankingPublished(submission);
+            if (publishedResult != null)
+                return publishedResult;
+
+            var isAssigned = await _context.JudgeAssignments.AnyAsync(a =>
+                a.JudgeId == judgeId &&
+                a.RoundId == submission.RoundId &&
+                a.CategoryId == submission.Team!.CategoryId);
+
+            if (!isAssigned)
+                return Forbid();
+
+            var duplicateCriteriaIds = request.Scores
+                .GroupBy(s => s.CriteriaId)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+
+            if (duplicateCriteriaIds.Any())
+            {
+                return BadRequest(new
+                {
+                    message = "Duplicate criteria found in request.",
+                    criteriaIds = duplicateCriteriaIds
+                });
+            }
+
+            var requestedCriteriaIds = request.Scores
+                .Select(s => s.CriteriaId)
+                .ToList();
+
+            var criteriaList = await _context.Criteria
+                .Where(c =>
+                    requestedCriteriaIds.Contains(c.CriteriaId) &&
+                    c.RoundId == submission.RoundId)
+                .ToListAsync();
+
+            var missingCriteriaIds = requestedCriteriaIds
+                .Except(criteriaList.Select(c => c.CriteriaId))
+                .ToList();
+
+            if (missingCriteriaIds.Any())
+            {
+                return BadRequest(new
+                {
+                    message = "One or more criteria do not belong to this submission round.",
+                    criteriaIds = missingCriteriaIds
+                });
+            }
+
+            var criteriaById = criteriaList.ToDictionary(c => c.CriteriaId);
+            var invalidScores = request.Scores
+                .Where(s => s.ScoreValue < 0 || s.ScoreValue > criteriaById[s.CriteriaId].MaxScore)
+                .Select(s => new
+                {
+                    s.CriteriaId,
+                    s.ScoreValue,
+                    maxScore = criteriaById[s.CriteriaId].MaxScore
+                })
+                .ToList();
+
+            if (invalidScores.Any())
+            {
+                return BadRequest(new
+                {
+                    message = "One or more scores are outside the allowed range.",
+                    scores = invalidScores
+                });
+            }
+
+            var existingScores = await _context.Scores
+                .Where(s =>
+                    s.SubmissionId == request.SubmissionId &&
+                    s.JudgeId == judgeId &&
+                    requestedCriteriaIds.Contains(s.CriteriaId))
+                .ToListAsync();
+
+            var existingByCriteriaId = existingScores.ToDictionary(s => s.CriteriaId);
+            var createdScores = new List<object>();
+            var updatedScores = new List<object>();
+
+            foreach (var item in request.Scores)
+            {
+                if (existingByCriteriaId.TryGetValue(item.CriteriaId, out var existingScore))
+                {
+                    var oldScoreValue = existingScore.ScoreValue;
+                    var oldComment = existingScore.Comment;
+
+                    existingScore.ScoreValue = item.ScoreValue;
+                    existingScore.Comment = item.Comment;
+                    existingScore.CreatedAt = DateTime.UtcNow;
+
+                    AddScoreAuditLog(
+                        existingScore,
+                        "Updated",
+                        oldScoreValue,
+                        oldComment,
+                        item.ScoreValue,
+                        item.Comment);
+
+                    updatedScores.Add(new
+                    {
+                        existingScore.ScoreId,
+                        existingScore.CriteriaId,
+                        existingScore.ScoreValue
+                    });
+
+                    continue;
+                }
+
+                var score = new Score
+                {
+                    SubmissionId = request.SubmissionId,
+                    JudgeId = judgeId,
+                    CriteriaId = item.CriteriaId,
+                    ScoreValue = item.ScoreValue,
+                    Comment = item.Comment
+                };
+
+                _context.Scores.Add(score);
+                AddScoreAuditLog(
+                    score,
+                    "Created",
+                    null,
+                    null,
+                    score.ScoreValue,
+                    score.Comment);
+
+                createdScores.Add(new
+                {
+                    score.ScoreId,
+                    score.CriteriaId,
+                    score.ScoreValue
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Bulk scores submitted successfully.",
+                createdCount = createdScores.Count,
+                updatedCount = updatedScores.Count,
+                createdScores,
+                updatedScores
+            });
         }
 
         [HttpGet("my-assigned-submissions")]

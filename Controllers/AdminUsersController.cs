@@ -52,6 +52,9 @@ namespace SEAL.NET.Controllers
                     user.Email,
                     user.IsApproved,
                     user.CreatedAt,
+                    user.StudentType,
+                    user.StudentCode,
+                    user.SchoolName,
                     roles
                 });
             }
@@ -78,7 +81,11 @@ namespace SEAL.NET.Controllers
                     user.Id,
                     user.FullName,
                     user.Email,
+                    user.IsApproved,
                     user.CreatedAt,
+                    user.StudentType,
+                    user.StudentCode,
+                    user.SchoolName,
                     roles
                 });
             }
@@ -101,6 +108,8 @@ namespace SEAL.NET.Controllers
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
+            await _userManager.UpdateSecurityStampAsync(user);
+
             return Ok(new { message = "User approved successfully." });
         }
 
@@ -112,12 +121,17 @@ namespace SEAL.NET.Controllers
             if (user == null)
                 return NotFound(new { message = "User not found." });
 
+            if (await IsLastApprovedAdminAsync(user))
+                return BadRequest(new { message = "Cannot reject the last approved Admin account." });
+
             user.IsApproved = false;
 
             var result = await _userManager.UpdateAsync(user);
 
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
+
+            await _userManager.UpdateSecurityStampAsync(user);
 
             return Ok(new { message = "User rejected successfully." });
         }
@@ -138,6 +152,13 @@ namespace SEAL.NET.Controllers
 
             var currentRoles = await _userManager.GetRolesAsync(user);
 
+            if (currentRoles.Contains("Admin") &&
+                request.Role != "Admin" &&
+                await IsLastApprovedAdminAsync(user))
+            {
+                return BadRequest(new { message = "Cannot demote the last approved Admin account." });
+            }
+
             if (currentRoles.Any())
             {
                 var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
@@ -150,6 +171,8 @@ namespace SEAL.NET.Controllers
 
             if (!addResult.Succeeded)
                 return BadRequest(addResult.Errors);
+
+            await _userManager.UpdateSecurityStampAsync(user);
 
             return Ok(new
             {
@@ -178,6 +201,15 @@ namespace SEAL.NET.Controllers
                 return BadRequest(result.Errors);
 
             return Ok(new { message = "User deleted successfully." });
+        }
+
+        private async Task<bool> IsLastApprovedAdminAsync(ApplicationUser user)
+        {
+            if (!await _userManager.IsInRoleAsync(user, "Admin"))
+                return false;
+
+            var adminUsers = await _userManager.GetUsersInRoleAsync("Admin");
+            return adminUsers.Count(admin => admin.IsApproved) <= 1;
         }
     }
 }

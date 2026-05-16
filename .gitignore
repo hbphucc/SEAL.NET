@@ -1,7 +1,16 @@
 bin/
 obj/
 .vs/
+*.tmp
 *.user
 *.suo
 appsettings.Development.json
 appsettings.json
+
+
+*.log
+*.err.log
+backend-dev.log
+backend-dev.err.log
+frontend-dev.log
+frontend-dev.err.log

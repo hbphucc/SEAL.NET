@@ -9,6 +9,7 @@ namespace SEAL.NET.Data
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
 
             string[] roles =
             {
@@ -27,8 +28,25 @@ namespace SEAL.NET.Data
                 }
             }
 
-            string adminEmail = "admin@seal.com";
-            string adminPassword = "Admin@123456";
+            var adminEmail = configuration["AdminBootstrap:Email"];
+            var adminPassword = configuration["AdminBootstrap:Password"];
+            var bootstrapAdminEnabled = configuration.GetValue<bool>("AdminBootstrap:Enabled");
+
+            if (!bootstrapAdminEnabled)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+            {
+                throw new InvalidOperationException(
+                    "Admin bootstrap is enabled, but AdminBootstrap:Email or AdminBootstrap:Password is not configured.");
+            }
+
+            if (adminPassword == "Admin@123456")
+            {
+                throw new InvalidOperationException("AdminBootstrap:Password must not use the default sample password.");
+            }
 
             var admin = await userManager.FindByEmailAsync(adminEmail);
 
