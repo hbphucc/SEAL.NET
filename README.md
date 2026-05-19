@@ -1,113 +1,432 @@
-# SEAL.NET
+# SEAL.NET — Competition Management Platform
 
-SEAL.NET is a competition team-management system with an ASP.NET Core backend and a Next.js frontend. It supports account approval, team registration, event/category/round setup, judge assignments, project submissions, scoring, ranking, and score audit logs.
+A full-stack competition management platform built with **ASP.NET Core 8 Web API** and **Next.js 16**, designed to manage the complete lifecycle of hackathons, academic competitions, and judging workflows.
+
+This project demonstrates production-oriented full-stack engineering, including authentication, role-based authorization, workflow automation, audit logging, containerized deployment, and modern frontend architecture.
+
+---
+
+## Overview
+
+SEAL.NET is a decoupled web application that enables organizations to run technical competitions efficiently.
+
+The platform supports:
+
+- participant registration
+- admin approval workflows
+- team formation and management
+- event / category / round configuration
+- judge assignment
+- project submissions
+- scoring and evaluation
+- ranking generation
+- audit trail tracking
+
+Built as a portfolio-grade project to showcase backend architecture, frontend engineering, API design, and deployment practices.
+
+---
+
+## Live Architecture
+
+```text
+Frontend (Next.js 16)
+        ↓
+REST API (ASP.NET Core 8)
+        ↓
+Business Services
+        ↓
+Repository Layer
+        ↓
+Entity Framework Core
+        ↓
+SQL Server
+```
+
+---
+
+## Core Features
+
+### Authentication & Authorization
+
+- JWT authentication
+- HttpOnly cookie token storage
+- ASP.NET Core Identity integration
+- Role-based access control (RBAC)
+- secure login/logout flow
+- lockout protection against brute-force login attempts
+
+Supported roles:
+
+| Role | Responsibilities |
+|------|------------------|
+| Admin | Full system management |
+| Judge | Review assigned submissions and submit scores |
+| Member | Register and participate in teams |
+| TeamLeader | Submit projects on behalf of teams |
+| Mentor | Reserved for future implementation |
+
+---
+
+### Competition Management
+
+Admins can:
+
+- create and manage events
+- configure competition categories
+- create competition rounds
+- define scoring criteria
+- assign judges to rounds/categories
+- approve or reject participants
+- manage teams
+- eliminate teams with reasons
+- monitor rankings
+- review score audit history
+
+---
+
+### Team Management
+
+Participants can:
+
+- register accounts
+- create teams
+- join teams
+- manage team membership
+- submit project URLs
+- participate across competition rounds
+
+---
+
+### Judge Workspace
+
+Judges can:
+
+- view assigned submissions
+- review project entries
+- submit scores
+- bulk score evaluations
+- provide comments and evaluation feedback
+
+---
+
+### Ranking System
+
+Built-in ranking features:
+
+- public leaderboard
+- admin leaderboard
+- round-based ranking
+- category-based ranking
+- score aggregation
+
+---
+
+### Audit & Monitoring
+
+Operational visibility includes:
+
+- score audit logs
+- exception handling middleware
+- health monitoring endpoint
+- structured API error responses
+
+---
 
 ## Tech Stack
 
-- Backend: ASP.NET Core 8, Entity Framework Core, SQL Server, ASP.NET Identity, JWT bearer auth via HttpOnly cookie
-- Frontend: Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, React Query, Axios
-- Tests: xUnit with EF Core InMemory
-- Tooling: Docker, GitHub Actions CI
+### Backend
 
-## Required Configuration
+**Platform**
+- .NET 8
+- ASP.NET Core Web API
 
-Use environment variables or .NET user-secrets for sensitive values. Do not commit real secrets.
+**Architecture**
+- Repository Pattern
+- DTO Pattern
+- Dependency Injection
+- Service Layer Separation
 
-Backend:
+**Authentication**
+- ASP.NET Core Identity
+- JWT Bearer Authentication
 
-```powershell
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Database=SEALDB;Trusted_Connection=True;TrustServerCertificate=True"
-dotnet user-secrets set "Jwt:Key" "replace-with-at-least-32-random-characters"
-dotnet user-secrets set "Jwt:Issuer" "SEAL.API"
-dotnet user-secrets set "Jwt:Audience" "SEAL.API.Users"
-dotnet user-secrets set "Jwt:ExpireDays" "7"
+**Database**
+- SQL Server
+- Entity Framework Core 8
+
+**Documentation**
+- Swagger / OpenAPI
+
+**Validation**
+- Data Annotations
+- FluentValidation
+
+**Utilities**
+- AutoMapper
+- BCrypt
+
+---
+
+### Frontend
+
+**Framework**
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+
+**UI**
+- Tailwind CSS 4
+- Radix UI
+- Lucide Icons
+
+**Forms & Validation**
+- React Hook Form
+- Zod
+
+**State Management**
+- TanStack React Query
+
+**Networking**
+- Axios
+
+**UX**
+- Sonner Toast Notifications
+
+---
+
+### DevOps / Tooling
+
+- Docker
+- Docker Compose
+- GitHub Actions
+- xUnit Testing
+- EF Core InMemory Testing
+
+---
+
+## Project Structure
+
+```bash
+SEAL.NET/
+│
+├── backend/
+│   ├── Controllers/
+│   ├── DTOs/
+│   ├── Models/
+│   ├── Repositories/
+│   ├── Services/
+│   ├── Middleware/
+│   └── Data/
+│
+├── frontend/
+│   ├── src/app/
+│   ├── src/components/
+│   ├── src/services/
+│   ├── src/hooks/
+│   └── src/types/
+│
+├── tests/
+│
+├── docker-compose.yml
+└── README.md
 ```
 
-Optional local admin bootstrap:
+---
 
-```powershell
-dotnet user-secrets set "AdminBootstrap:Enabled" "true"
-dotnet user-secrets set "AdminBootstrap:Email" "admin@example.com"
-dotnet user-secrets set "AdminBootstrap:Password" "replace-with-a-strong-password"
+## Getting Started
+
+## Prerequisites
+
+Install:
+
+- .NET 8 SDK
+- Node.js 18+
+- SQL Server
+- Docker (optional)
+
+---
+
+## Local Development
+
+### Clone Repository
+
+```bash
+git clone https://github.com/hbphucc/SEAL.NET.git
+cd SEAL.NET
 ```
 
-Frontend:
+---
 
-```env
-NEXT_PUBLIC_API_BASE_URL=https://localhost:5001/api
-```
+### Backend Setup
 
-## Run Locally
-
-Backend:
-
-```powershell
+```bash
+cd backend
 dotnet restore
 dotnet ef database update
 dotnet run
 ```
 
-Frontend:
+Backend runs at:
 
-```powershell
+```bash
+https://localhost:5001
+```
+
+Swagger:
+
+```bash
+https://localhost:5001/swagger
+```
+
+---
+
+### Frontend Setup
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Default local URLs:
+Frontend runs at:
 
-- Backend API: `https://localhost:5001/api`
-- Swagger in development: `https://localhost:5001/swagger`
-- Frontend: `https://localhost:3000`
-- Health check: `https://localhost:5001/health`
-
-## Tests and Builds
-
-```powershell
-dotnet build
-dotnet test
-cd frontend
-npm run lint
-npm run build
+```bash
+https://localhost:3000
 ```
 
-## Docker
+---
 
-Set a strong JWT key before running compose:
+## Docker Deployment
 
-```powershell
-$env:JWT_KEY="replace-with-at-least-32-random-characters"
-$env:MSSQL_SA_PASSWORD="Change_this_password_123!"
+Set environment variables:
+
+```bash
+JWT_KEY=your-secure-secret-key
+MSSQL_SA_PASSWORD=YourStrongPassword123!
+```
+
+Run:
+
+```bash
 docker compose up --build
 ```
 
-Compose starts SQL Server, backend, and frontend. Apply migrations before real use.
+---
 
-## Roles
+## API Highlights
 
-- `Admin`: manages users, events, rounds, categories, teams, rankings, judge assignments, and score audits
-- `Judge`: reviews assigned submissions and submits scores
-- `Member`: registers and joins teams
-- `TeamLeader`: submits project URLs for an approved team
-- `Mentor`: reserved for future workflows
+Representative endpoints:
 
-## Main Features
+### Authentication
 
-- Account registration and admin approval
-- Role management
-- Competition event setup with categories, rounds, and criteria
-- Team creation, approval, elimination, and deletion
-- Judge assignment management
-- Judge scoring workspace
-- Project submissions
-- Public and admin rankings
-- Score audit logs
+```http
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+GET /api/auth/me
+```
 
-## Production Notes
+### Team Management
 
-- Store secrets in environment variables, user-secrets, or a secret manager.
-- Keep `Cors:AllowedOrigins` strict when credentials are enabled.
-- Use HTTPS in production.
-- Run EF migrations during deployment.
-- Monitor `/health` from your hosting platform.
+```http
+POST /api/teams
+GET /api/teams/my-team
+POST /api/teams/add-member
+DELETE /api/teams/remove-member
+```
+
+### Admin
+
+```http
+GET /api/admin/users
+PUT /api/admin/users/{id}/approve
+PUT /api/admin/teams/{id}/approve
+PUT /api/admin/teams/{id}/eliminate
+```
+
+### Judge
+
+```http
+GET /api/judge/scores/my-assigned-submissions
+POST /api/judge/scores
+POST /api/judge/scores/bulk
+```
+
+---
+
+## Security Practices
+
+Implemented security measures:
+
+- HttpOnly auth cookies
+- JWT validation
+- RBAC authorization
+- login lockout policy
+- secure CORS configuration
+- centralized exception middleware
+- production-safe error handling
+- HTTPS support
+
+---
+
+## Testing
+
+Backend test suite:
+
+```bash
+cd tests
+dotnet test
+```
+
+Testing includes:
+
+- service layer validation
+- repository behavior
+- API business logic
+
+---
+
+## Production Readiness
+
+Implemented:
+
+- containerized deployment
+- health checks
+- structured API responses
+- secret externalization
+- environment-based configuration
+
+Recommended future improvements:
+
+- refresh token rotation
+- Redis caching
+- distributed logging
+- background jobs
+- message queue integration
+- rate limiting
+- CI/CD deployment pipeline
+- observability dashboards
+
+---
+
+## Portfolio Highlights
+
+Engineering concepts demonstrated:
+
+- full-stack architecture
+- REST API design
+- authentication & authorization
+- RBAC
+- clean backend layering
+- frontend API integration
+- state management
+- form validation
+- Docker deployment
+- testing strategy
+- audit logging
+
+---
+
+## License
+
+This project is developed for educational and portfolio purposes.
