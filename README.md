@@ -194,7 +194,7 @@ Operational visibility includes:
 
 ---
 
-### DevOps / Tooling
+### Tooling
 
 - Docker
 - Docker Compose
