@@ -1,3 +1,11 @@
+![Status](https://img.shields.io/badge/Status-Active-success)
+![.NET](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet&logoColor=white)
+![ASP.NET Core](https://img.shields.io/badge/ASP.NET_Core-8-5C2D91?logo=dotnet&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![SQL Server](https://img.shields.io/badge/SQL_Server-CC2927?logo=microsoftsqlserver&logoColor=white)
+
 # SEAL.NET — Competition Management Platform
 
 A full-stack competition management platform built with **ASP.NET Core 8 Web API** and **Next.js 16**, designed to manage the complete lifecycle of hackathons, academic competitions, and judging workflows.
@@ -406,24 +414,6 @@ Recommended future improvements:
 - rate limiting
 - CI/CD deployment pipeline
 - observability dashboards
-
----
-
-## Portfolio Highlights
-
-Engineering concepts demonstrated:
-
-- full-stack architecture
-- REST API design
-- authentication & authorization
-- RBAC
-- clean backend layering
-- frontend API integration
-- state management
-- form validation
-- Docker deployment
-- testing strategy
-- audit logging
 
 ---
 
