@@ -3,7 +3,7 @@ import { decodeJwt } from "jose";
 
 const PUBLIC_ROUTES = ["/login", "/register", "/unauthorized", "/leaderboard"];
 
-const ROLE_GUARDS: Array<{ path: string; roles: string[] }> = [
+const ROLE_GUARDS = [
   { path: "/admin", roles: ["Admin"] },
   { path: "/teams", roles: ["Admin"] },
   { path: "/members", roles: ["Admin"] },
@@ -17,10 +17,12 @@ const ROLE_GUARDS: Array<{ path: string; roles: string[] }> = [
 ];
 
 function isPublicRoute(pathname: string) {
-  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  return PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
 }
 
-function getRequiredRoles(pathname: string): string[] | null {
+function getRequiredRoles(pathname: string) {
   const guard = ROLE_GUARDS.find(
     (item) => pathname === item.path || pathname.startsWith(`${item.path}/`)
   );
@@ -35,10 +37,7 @@ function getTokenRoles(token: string): string[] {
       payload.roles ??
       payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
 
-    if (Array.isArray(roleClaim)) {
-      return roleClaim.map(String);
-    }
-
+    if (Array.isArray(roleClaim)) return roleClaim.map(String);
     return roleClaim ? [String(roleClaim)] : [];
   } catch {
     return [];
@@ -54,7 +53,7 @@ function isTokenExpired(token: string): boolean {
   }
 }
 
-export async function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
@@ -67,22 +66,19 @@ export async function proxy(request: NextRequest) {
 
   const token = request.cookies.get("seal_token")?.value;
 
-  if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (isTokenExpired(token)) {
+  if (!token || isTokenExpired(token)) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   const requiredRoles = getRequiredRoles(pathname);
+
   if (requiredRoles) {
     const tokenRoles = getTokenRoles(token);
-    const hasRequiredRole = requiredRoles.some((role) => tokenRoles.includes(role));
+    const hasRequiredRole = requiredRoles.some((role) =>
+      tokenRoles.includes(role)
+    );
 
     if (!hasRequiredRole) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
