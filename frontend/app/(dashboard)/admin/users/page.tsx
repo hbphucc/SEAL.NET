@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -69,7 +69,7 @@ export default function AdminUsersPage() {
             ? row.roles.map((role) => (
               <StatusBadge key={role} type="role" value={role} />
             ))
-            : <span className="text-xs text-slate-400">—</span>
+            : <span className="text-xs text-slate-400">-</span>
           }
         </div>
       ),
@@ -81,7 +81,7 @@ export default function AdminUsersPage() {
         <span className="text-sm text-slate-600">
           {row.studentType !== undefined && row.studentType !== null
             ? STUDENT_TYPE_LABELS[row.studentType as number]
-            : "—"}
+            : "-"}
         </span>
       ),
     },
@@ -89,7 +89,7 @@ export default function AdminUsersPage() {
       key: "studentCode",
       label: "Student ID",
       render: (_: unknown, row: User) => (
-        <span className="text-sm text-slate-600 font-mono">{row.studentCode || "—"}</span>
+        <span className="text-sm text-slate-600 font-mono">{row.studentCode || "-"}</span>
       ),
     },
     {

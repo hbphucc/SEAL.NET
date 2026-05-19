@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useAdminTeams } from "@/hooks/useTeams";
 import DataTable from "@/components/shared/DataTable";
@@ -28,7 +28,7 @@ export default function EliminationsPage() {
       key: "category",
       label: "Category",
       render: (_: unknown, row: Team) => (
-        <span className="text-sm text-slate-600">{row.category?.categoryName ?? "—"}</span>
+        <span className="text-sm text-slate-600">{row.category?.categoryName ?? "-"}</span>
       ),
     },
     {

@@ -30,9 +30,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/unauthorized" ||
+    pathname === "/leaderboard" ||
     pathname.startsWith("/login/") ||
     pathname.startsWith("/register/") ||
-    pathname.startsWith("/unauthorized/");
+    pathname.startsWith("/unauthorized/") ||
+    pathname.startsWith("/leaderboard/");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(!isPublicAuthRoute);
 
@@ -41,9 +43,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
     }
 
-    const profile = await authService.getProfile();
-    setUser(profile);
-    setIsLoading(false);
+    try {
+      const profile = await authService.getProfile();
+      setUser(profile);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -67,7 +72,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile, isPublicAuthRoute]);
 
   const login = useCallback(async (data: LoginRequest) => {
-    await authService.login(data);
+    const response = await authService.login(data);
+    setUser(response.user);
   }, []);
 
   const register = useCallback(async (data: RegisterRequest) => {
@@ -76,15 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await authService.logout();
+    setUser(null);
   }, []);
 
   const hasRole = useCallback(
-    (role: string) => user?.roles.includes(role as never) ?? false,
+    (role: string) => user?.roles.some((userRole) => userRole === role) ?? false,
     [user]
   );
 
   const hasAnyRole = useCallback(
-    (roles: string[]) => roles.some((r) => user?.roles.includes(r as never)) ?? false,
+    (roles: string[]) => roles.some((role) => user?.roles.some((userRole) => userRole === role)) ?? false,
     [user]
   );
 

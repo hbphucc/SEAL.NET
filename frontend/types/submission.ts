@@ -4,6 +4,9 @@ export interface Submission {
   demoUrl?: string | null;
   slideUrl?: string | null;
   submittedAt: string;
+  updatedAt?: string | null;
+  isWithdrawn?: boolean;
+  withdrawnAt?: string | null;
   round?: {
     roundId: string;
     roundName: string;

@@ -18,17 +18,20 @@ namespace SEAL.NET.Controllers
         private const string SecurityStampClaimType = "seal_security_stamp";
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _environment;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
+            SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration,
             IWebHostEnvironment environment)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _signInManager = signInManager;
             _configuration = configuration;
             _environment = environment;
         }
@@ -102,7 +105,19 @@ namespace SEAL.NET.Controllers
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
 
-            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
+            if (user == null)
+                return Unauthorized(new { message = "Email or password is incorrect." });
+
+            var signInResult = await _signInManager.PasswordSignInAsync(
+                user.UserName!,
+                model.Password,
+                isPersistent: false,
+                lockoutOnFailure: true);
+
+            if (signInResult.IsLockedOut)
+                return Unauthorized(new { message = "Too many failed login attempts. Please try again later." });
+
+            if (!signInResult.Succeeded)
                 return Unauthorized(new { message = "Email or password is incorrect." });
 
             if (!user.IsApproved)

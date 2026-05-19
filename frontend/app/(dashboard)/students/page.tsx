@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useUsers } from "@/hooks/useUsers";
 import DataTable from "@/components/shared/DataTable";
@@ -49,7 +49,7 @@ export default function StudentsPage() {
       label: "Student ID",
       render: (_: unknown, row: User) => (
         <span className="font-mono text-sm text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-          {row.studentCode || "—"}
+          {row.studentCode || "-"}
         </span>
       ),
     },
@@ -66,7 +66,7 @@ export default function StudentsPage() {
               ? "bg-purple-100 text-purple-700 border-purple-200"
               : "bg-gray-100 text-gray-600 border-gray-200"
           }`}>
-            {type !== undefined ? STUDENT_TYPE_LABELS[type] : "—"}
+            {type !== undefined ? STUDENT_TYPE_LABELS[type] : "-"}
           </span>
         );
       },

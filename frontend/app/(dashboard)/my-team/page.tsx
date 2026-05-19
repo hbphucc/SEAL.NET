@@ -2,16 +2,20 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { Plus, Send, Trash2, Trophy, UserPlus, Users } from "lucide-react";
+import { Plus, Send, Trash2, Trophy, Users } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import PendingInvitesPanel from "@/components/team/PendingInvitesPanel";
+import TeamInvitePanel from "@/components/team/TeamInvitePanel";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAddTeamMember, useCreateTeam, useMyTeam, useRemoveTeamMember } from "@/hooks/useTeams";
+import { useCreateTeam, useMyTeam, useRemoveTeamMember } from "@/hooks/useTeams";
 import { useEvents } from "@/hooks/useEvents";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getErrorMessage } from "@/lib/utils";
 import { Category } from "@/types/event";
 import { TeamMember } from "@/types/team";
+
+const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function MyTeamPage() {
   const { user, hasRole } = useAuth();
@@ -19,7 +23,6 @@ export default function MyTeamPage() {
   const { data: myTeam, isLoading } = useMyTeam(canHaveTeam);
   const { data: events = [], isLoading: eventsLoading } = useEvents();
   const createTeam = useCreateTeam();
-  const addMember = useAddTeamMember();
   const removeMember = useRemoveTeamMember();
 
   const [teamName, setTeamName] = useState("");
@@ -27,8 +30,6 @@ export default function MyTeamPage() {
   const [categoryId, setCategoryId] = useState("");
   const [memberIdsText, setMemberIdsText] = useState("");
   const [createError, setCreateError] = useState("");
-  const [newMemberId, setNewMemberId] = useState("");
-  const [memberError, setMemberError] = useState("");
   const [removeTarget, setRemoveTarget] = useState<TeamMember | null>(null);
 
   const selectedEvent = events.find((event) => event.eventId === selectedEventId);
@@ -43,6 +44,12 @@ export default function MyTeamPage() {
 
   const isLeader = !!user && myTeam?.leaderId === user.id;
   const canEditMembers = isLeader && myTeam?.status === "Pending";
+  const canInviteMembers =
+    isLeader &&
+    !!myTeam &&
+    myTeam.members.length < 5 &&
+    myTeam.status !== "Eliminated" &&
+    myTeam.status !== "Archived";
   const canSubmit = isLeader && myTeam?.status === "Approved" && !!myTeam.currentRound;
 
   if (!canHaveTeam) {
@@ -77,23 +84,21 @@ export default function MyTeamPage() {
       return;
     }
 
-    await createTeam.mutateAsync({
-      teamName: teamName.trim(),
-      categoryId,
-      memberIds,
-    });
-  }
-
-  async function handleAddMember(e: FormEvent) {
-    e.preventDefault();
-    setMemberError("");
-    if (!myTeam) return;
-    if (!newMemberId.trim()) {
-      setMemberError("User ID is required.");
+    const invalidMemberId = memberIds.find((memberId) => !guidPattern.test(memberId));
+    if (invalidMemberId) {
+      setCreateError(`"${invalidMemberId}" is not a valid user ID.`);
       return;
     }
-    await addMember.mutateAsync({ teamId: myTeam.teamId, data: { userId: newMemberId.trim() } });
-    setNewMemberId("");
+
+    try {
+      await createTeam.mutateAsync({
+        teamName: teamName.trim(),
+        categoryId,
+        memberIds,
+      });
+    } catch (err) {
+      setCreateError(getErrorMessage(err));
+    }
   }
 
   if (isLoading || eventsLoading) {
@@ -109,6 +114,7 @@ export default function MyTeamPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="My Team" description="Create a team and invite teammates by user ID" icon={Trophy} />
+        <PendingInvitesPanel enabled={canHaveTeam} />
         <form onSubmit={handleCreateTeam} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="grid gap-4 lg:grid-cols-2">
             <label className="lg:col-span-2">
@@ -192,6 +198,8 @@ export default function MyTeamPage() {
         }
       />
 
+      <PendingInvitesPanel enabled={canHaveTeam} />
+
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Status</p>
@@ -240,21 +248,9 @@ export default function MyTeamPage() {
             );
           })}
         </div>
-        {canEditMembers && myTeam.members.length < 5 && (
-          <form onSubmit={handleAddMember} className="flex flex-col gap-3 border-t border-slate-200 p-5 sm:flex-row">
-            <input
-              value={newMemberId}
-              onChange={(e) => setNewMemberId(e.target.value)}
-              placeholder="User ID"
-              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button type="submit" disabled={addMember.isPending} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-              <UserPlus className="h-4 w-4" />
-              Add Member
-            </button>
-          </form>
+        {isLeader && (
+          <TeamInvitePanel teamId={myTeam.teamId} disabled={!canInviteMembers} />
         )}
-        {memberError && <p className="px-5 pb-5 text-sm text-red-600">{memberError}</p>}
       </div>
 
       <ConfirmDialog

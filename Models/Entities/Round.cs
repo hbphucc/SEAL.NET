@@ -1,6 +1,8 @@
 ﻿
 namespace SEAL.NET.Models.Entities
 {
+    using SEAL.NET.Models.Enums;
+
     public class Round
     {
         public Guid RoundId { get; set; } = Guid.NewGuid();
@@ -8,6 +10,8 @@ namespace SEAL.NET.Models.Entities
         public int RoundOrder { get; set; }
         public int MaxTeamsAdvancing { get; set; }
         public bool IsRankingPublished { get; set; } = false;
+        public RoundStatus Status { get; set; } = RoundStatus.Draft;
+        public bool IsSubmissionLocked { get; set; } = false;
         public DateTime? SubmissionDeadline { get; set; }
 
 

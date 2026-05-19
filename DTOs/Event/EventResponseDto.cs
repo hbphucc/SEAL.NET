@@ -11,6 +11,11 @@ namespace SEAL.NET.DTOs.Event
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public string Status { get; set; } = string.Empty;
+        public bool IsPublished { get; set; }
+        public bool IsArchived { get; set; }
+        public DateTime? RegistrationClosedAt { get; set; }
+        public DateTime? JudgingStartedAt { get; set; }
+        public DateTime? JudgingEndedAt { get; set; }
         public List<CategoryDto> Categories { get; set; } = [];
         public List<RoundDto> Rounds { get; set; } = [];
     }

@@ -38,7 +38,7 @@ namespace SEAL.NET.Controllers
                     .ThenInclude(t => t.Category)
                 .Include(s => s.Scores)
                     .ThenInclude(sc => sc.Criteria)
-                .Where(s => s.RoundId == roundId)
+                .Where(s => s.RoundId == roundId && !s.IsWithdrawn && s.Team!.Status != Models.Enums.TeamStatus.Eliminated)
                 .ToListAsync();
 
             var ranking = submissions
@@ -82,7 +82,9 @@ namespace SEAL.NET.Controllers
                     .ThenInclude(sc => sc.Criteria)
                 .Where(s =>
                     s.RoundId == roundId &&
-                    s.Team!.CategoryId == categoryId)
+                    s.Team!.CategoryId == categoryId &&
+                    !s.IsWithdrawn &&
+                    s.Team.Status != Models.Enums.TeamStatus.Eliminated)
                 .ToListAsync();
 
             var ranking = submissions

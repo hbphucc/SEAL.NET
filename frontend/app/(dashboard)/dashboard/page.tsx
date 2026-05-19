@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
@@ -48,7 +48,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">
-              Hello, {user?.fullName} 👋
+              Hello, {user?.fullName} 
             </h2>
             <p className="text-slate-300 text-sm mt-1">
               {new Date().toLocaleDateString("en-US", {
@@ -72,7 +72,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats grid — Admin only */}
+      {/* Stats grid - Admin only */}
       {isAdmin && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -210,7 +210,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* My Team — Member/TeamLeader */}
+      {/* My Team - Member/TeamLeader */}
       {!isAdmin && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
           <h3 className="font-semibold text-slate-800 mb-4">My Team</h3>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from "next/navigation";
@@ -10,6 +10,8 @@ const BREADCRUMB_MAP: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/profile": "Profile",
   "/admin/users": "Manage Users",
+  "/judge/dashboard": "Judge Dashboard",
+  "/judge/submissions": "Judge Submissions",
   "/teams": "Manage Teams",
   "/members": "Members",
   "/team-leaders": "Team Leaders",

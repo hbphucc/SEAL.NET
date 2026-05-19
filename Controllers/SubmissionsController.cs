@@ -51,6 +51,8 @@ namespace SEAL.NET.Controllers
 
             if (team.Status != TeamStatus.Approved)
                 return BadRequest(new { message = "Only approved teams can submit." });
+            if (!string.IsNullOrWhiteSpace(team.EliminationReason) || team.Status == TeamStatus.Eliminated)
+                return BadRequest(new { message = "Eliminated teams cannot submit." });
 
             if (team.CurrentRoundId != request.RoundId)
                 return BadRequest(new { message = "Team can only submit for its current round." });
@@ -58,6 +60,9 @@ namespace SEAL.NET.Controllers
             var round = await _context.Rounds.FindAsync(request.RoundId);
             if (round == null)
                 return NotFound(new { message = "Round not found." });
+
+            if (round.Status != RoundStatus.Open || round.IsSubmissionLocked)
+                return BadRequest(new { message = "Round is not open for submissions." });
 
             if (round.SubmissionDeadline == null)
                 return BadRequest(new { message = "This round has no submission deadline configured." });
@@ -76,7 +81,17 @@ namespace SEAL.NET.Controllers
                 existingSubmission.DemoUrl = request.DemoUrl;
                 existingSubmission.SlideUrl = request.SlideUrl;
                 existingSubmission.SubmittedAt = DateTime.UtcNow;
+                existingSubmission.UpdatedAt = DateTime.UtcNow;
+                existingSubmission.IsWithdrawn = false;
+                existingSubmission.WithdrawnAt = null;
 
+                _context.AuditLogs.Add(new AuditLog
+                {
+                    Action = "SubmissionUpdated",
+                    EntityType = "Submission",
+                    EntityId = existingSubmission.SubmissionId,
+                    ActorUserId = currentUserId
+                });
                 await _context.SaveChangesAsync();
 
                 return Ok(new
@@ -96,6 +111,13 @@ namespace SEAL.NET.Controllers
             };
 
             _context.Submissions.Add(submission);
+            _context.AuditLogs.Add(new AuditLog
+            {
+                Action = "SubmissionCreated",
+                EntityType = "Submission",
+                EntityId = submission.SubmissionId,
+                ActorUserId = currentUserId
+            });
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -103,6 +125,84 @@ namespace SEAL.NET.Controllers
                 message = "Submission created successfully.",
                 submission.SubmissionId
             });
+        }
+
+        [HttpGet("{submissionId}")]
+        public async Task<IActionResult> GetSubmission(Guid submissionId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var submission = await _context.Submissions
+                .Include(s => s.Team)
+                    .ThenInclude(t => t.Members)
+                .Include(s => s.Team)
+                    .ThenInclude(t => t.Category)
+                .Include(s => s.Round)
+                .FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
+
+            if (submission == null)
+                return NotFound(new { message = "Submission not found." });
+
+            var isMember = submission.Team.Members.Any(m => m.UserId == currentUserId);
+            var isAdmin = User.IsInRole("Admin");
+            var isJudge = User.IsInRole("Judge");
+            var isMentor = User.IsInRole("Mentor") && await _context.MentorAssignments.AnyAsync(a => a.TeamId == submission.TeamId && a.MentorId == currentUserId);
+
+            if (!isMember && !isAdmin && !isMentor)
+            {
+                if (!isJudge)
+                    return Forbid();
+
+                var assigned = await _context.JudgeAssignments.AnyAsync(a =>
+                    a.JudgeId == currentUserId &&
+                    a.RoundId == submission.RoundId &&
+                    a.CategoryId == submission.Team.CategoryId);
+                if (!assigned)
+                    return Forbid();
+            }
+
+            return Ok(new
+            {
+                submission.SubmissionId,
+                submission.RepositoryUrl,
+                submission.DemoUrl,
+                submission.SlideUrl,
+                submission.SubmittedAt,
+                submission.UpdatedAt,
+                submission.IsWithdrawn,
+                submission.WithdrawnAt,
+                team = new { submission.Team.TeamId, submission.Team.TeamName },
+                round = new { submission.Round.RoundId, submission.Round.RoundName }
+            });
+        }
+
+        [HttpPost("{submissionId}/withdraw")]
+        [Authorize(Roles = "Member,TeamLeader")]
+        public async Task<IActionResult> WithdrawSubmission(Guid submissionId)
+        {
+            var currentUserId = GetCurrentUserId();
+            var submission = await _context.Submissions
+                .Include(s => s.Team)
+                .Include(s => s.Round)
+                .FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
+
+            if (submission == null)
+                return NotFound(new { message = "Submission not found." });
+            if (submission.Team.LeaderId != currentUserId)
+                return Forbid();
+            if (submission.Round.Status != RoundStatus.Open || submission.Round.IsSubmissionLocked)
+                return BadRequest(new { message = "Cannot withdraw after the round closes or locks." });
+
+            submission.IsWithdrawn = true;
+            submission.WithdrawnAt = DateTime.UtcNow;
+            _context.AuditLogs.Add(new AuditLog
+            {
+                Action = "SubmissionWithdrawn",
+                EntityType = "Submission",
+                EntityId = submission.SubmissionId,
+                ActorUserId = currentUserId
+            });
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Submission withdrawn successfully." });
         }
 
         [HttpGet("team/{teamId}")]
@@ -126,7 +226,7 @@ namespace SEAL.NET.Controllers
 
             var submissionsQuery = _context.Submissions
                 .Include(s => s.Round)
-                .Where(s => s.TeamId == teamId);
+                .Where(s => s.TeamId == teamId && !s.IsWithdrawn);
 
             if (isJudge && !isAdmin && !isMember)
             {
@@ -170,7 +270,7 @@ namespace SEAL.NET.Controllers
             var submissionsQuery = _context.Submissions
                 .Include(s => s.Team)
                     .ThenInclude(t => t.Category)
-                .Where(s => s.RoundId == roundId);
+                .Where(s => s.RoundId == roundId && !s.IsWithdrawn && s.Team!.Status != TeamStatus.Eliminated);
 
             if (User.IsInRole("Judge") && !User.IsInRole("Admin"))
             {

@@ -16,3 +16,17 @@ export interface ScoreAuditLog {
   newComment?: string | null;
   createdAt: string;
 }
+
+export interface AuditLog {
+  auditLogId: string;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  details?: string | null;
+  createdAt: string;
+  actor?: {
+    id: string;
+    fullName: string;
+    email: string;
+  } | null;
+}

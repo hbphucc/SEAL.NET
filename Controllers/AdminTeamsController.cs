@@ -96,6 +96,21 @@ namespace SEAL.NET.Controllers
                 return BadRequest(new { message = "Team must have 3 to 5 members before approval." });
 
             team.Status = TeamStatus.Approved;
+            team.StatusReason = null;
+
+            foreach (var member in team.Members)
+            {
+                member.IsLeader = member.UserId == team.LeaderId;
+                member.Role = member.IsLeader ? TeamMemberRole.Leader : TeamMemberRole.Member;
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = member.UserId,
+                    Type = "TeamApproved",
+                    Title = "Team approved",
+                    Message = $"{team.TeamName} has been approved.",
+                    Link = "/my-team"
+                });
+            }
 
             var leader = await _userManager.FindByIdAsync(team.LeaderId.ToString());
             if (leader != null && !await _userManager.IsInRoleAsync(leader, "TeamLeader"))
@@ -104,20 +119,54 @@ namespace SEAL.NET.Controllers
                 await _userManager.UpdateSecurityStampAsync(leader);
             }
 
+            _context.AuditLogs.Add(new AuditLog
+            {
+                Action = "TeamApproved",
+                EntityType = "Team",
+                EntityId = teamId,
+                ActorUserId = GetCurrentUserIdOrNull()
+            });
+
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Team approved successfully." });
         }
 
         [HttpPut("{teamId}/reject")]
-        public async Task<IActionResult> RejectTeam(Guid teamId)
+        public async Task<IActionResult> RejectTeam(Guid teamId, [FromBody] TeamDecisionRequest? request = null)
         {
-            var team = await _context.Teams.FindAsync(teamId);
+            var team = await _context.Teams
+                .Include(t => t.Members)
+                .FirstOrDefaultAsync(t => t.TeamId == teamId);
 
             if (team == null)
                 return NotFound(new { message = "Team not found." });
 
             team.Status = TeamStatus.Eliminated;
+            team.StatusReason = request?.Reason;
+            team.EliminationReason = request?.Reason;
+            team.EliminatedAt = DateTime.UtcNow;
+
+            foreach (var member in team.Members)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = member.UserId,
+                    Type = "TeamRejected",
+                    Title = "Team rejected",
+                    Message = request?.Reason,
+                    Link = "/my-team"
+                });
+            }
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                Action = "TeamRejected",
+                EntityType = "Team",
+                EntityId = teamId,
+                Details = request?.Reason,
+                ActorUserId = GetCurrentUserIdOrNull()
+            });
 
             await _context.SaveChangesAsync();
             await RemoveTeamLeaderRoleIfNoApprovedTeamsAsync(team.LeaderId);
@@ -140,7 +189,30 @@ namespace SEAL.NET.Controllers
 
             team.Status = TeamStatus.Eliminated;
             team.EliminationReason = request.Reason;
+            team.StatusReason = request.Reason;
             team.EliminatedAt = DateTime.UtcNow;
+
+            var members = await _context.TeamMembers.Where(m => m.TeamId == teamId).ToListAsync();
+            foreach (var member in members)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = member.UserId,
+                    Type = "TeamEliminated",
+                    Title = "Team eliminated",
+                    Message = request.Reason,
+                    Link = "/my-team"
+                });
+            }
+
+            _context.AuditLogs.Add(new AuditLog
+            {
+                Action = "TeamEliminated",
+                EntityType = "Team",
+                EntityId = teamId,
+                Details = request.Reason,
+                ActorUserId = GetCurrentUserIdOrNull()
+            });
 
             await _context.SaveChangesAsync();
             await RemoveTeamLeaderRoleIfNoApprovedTeamsAsync(team.LeaderId);
@@ -185,10 +257,23 @@ namespace SEAL.NET.Controllers
             var leaderId = team.LeaderId;
 
             _context.Teams.Remove(team);
+            _context.AuditLogs.Add(new AuditLog
+            {
+                Action = "TeamDeleted",
+                EntityType = "Team",
+                EntityId = teamId,
+                ActorUserId = GetCurrentUserIdOrNull()
+            });
             await _context.SaveChangesAsync();
             await RemoveTeamLeaderRoleIfNoApprovedTeamsAsync(leaderId);
 
             return Ok(new { message = "Team deleted successfully." });
+        }
+
+        private Guid? GetCurrentUserIdOrNull()
+        {
+            var value = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            return Guid.TryParse(value, out var userId) ? userId : null;
         }
     }
 }

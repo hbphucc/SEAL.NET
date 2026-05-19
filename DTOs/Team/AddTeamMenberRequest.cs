@@ -5,6 +5,6 @@ namespace SEAL.NET.DTOs.Team
     public class AddTeamMemberRequest
     {
         [Required]
-        public Guid UserId { get; set; }
+        public string StudentCode { get; set; } = string.Empty;
     }
 }

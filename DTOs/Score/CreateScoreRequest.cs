@@ -14,5 +14,7 @@ namespace SEAL.NET.DTOs.Score
         public decimal ScoreValue { get; set; }
 
         public string? Comment { get; set; }
+
+        public bool SubmitFinal { get; set; } = false;
     }
 }

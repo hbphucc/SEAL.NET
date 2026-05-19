@@ -59,6 +59,7 @@ export function useUpdateUserRole() {
     onSuccess: (data) => {
       toast.success(data.message);
       qc.invalidateQueries({ queryKey: USER_KEYS.all });
+      qc.invalidateQueries({ queryKey: USER_KEYS.pending });
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });

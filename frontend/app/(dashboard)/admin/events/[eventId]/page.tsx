@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Edit, Layers, ListChecks, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Layers, ListChecks, Plus, Trash2, UserCheck } from "lucide-react";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DataTable from "@/components/shared/DataTable";
 import PageHeader from "@/components/shared/PageHeader";
@@ -23,6 +23,8 @@ import {
   useUpdateCriteria,
   useUpdateRound,
 } from "@/hooks/useEvents";
+import { useCreateJudgeAssignment, useDeleteJudgeAssignment, useJudgeAssignments } from "@/hooks/useJudges";
+import { useUsers } from "@/hooks/useUsers";
 import { formatDate } from "@/lib/utils";
 import { Category, CategoryPayload, Criteria, CriteriaPayload, Round, RoundPayload } from "@/types/event";
 
@@ -53,7 +55,7 @@ const EMPTY_ROUND: RoundFormState = {
 };
 const EMPTY_CRITERIA: CriteriaFormState = { criteriaName: "", maxScore: "10", weight: "0" };
 
-function toDateTimeLocal(value?: string) {
+function toDateTimeLocal(value?: string | null) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -350,6 +352,8 @@ export default function AdminEventSetupPage() {
         )}
       </section>
 
+      <JudgeAssignmentsPanel categories={categories} rounds={rounds} />
+
       {categoryFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setCategoryFormOpen(false)} />
@@ -428,6 +432,120 @@ export default function AdminEventSetupPage() {
         isLoading={deleteRound.isPending}
       />
     </div>
+  );
+}
+
+function JudgeAssignmentsPanel({
+  categories,
+  rounds,
+}: {
+  categories: Category[];
+  rounds: Round[];
+}) {
+  const { data: users = [], isLoading: usersLoading } = useUsers();
+  const { data: assignments = [], isLoading: assignmentsLoading } = useJudgeAssignments();
+  const createAssignment = useCreateJudgeAssignment();
+  const deleteAssignment = useDeleteJudgeAssignment();
+  const [judgeId, setJudgeId] = useState("");
+  const [roundId, setRoundId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [formError, setFormError] = useState("");
+  const judges = users.filter((user) => user.roles.includes("Judge") && user.isApproved);
+  const roundIds = new Set(rounds.map((round) => round.roundId));
+  const categoryIds = new Set(categories.map((category) => category.categoryId));
+  const eventAssignments = assignments.filter(
+    (assignment) => roundIds.has(assignment.round.roundId) && categoryIds.has(assignment.category.categoryId)
+  );
+
+  async function handleCreate(e: FormEvent) {
+    e.preventDefault();
+    setFormError("");
+    if (!judgeId || !roundId || !categoryId) {
+      setFormError("Choose a judge, round, and category.");
+      return;
+    }
+
+    await createAssignment.mutateAsync({ judgeId, roundId, categoryId });
+    setJudgeId("");
+    setRoundId("");
+    setCategoryId("");
+  }
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-base font-semibold text-slate-900">Judge Assignments</h2>
+        <p className="text-sm text-slate-500">Assign approved judges to this event&apos;s rounds and categories.</p>
+      </div>
+
+      <form onSubmit={handleCreate} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_1fr_1fr_auto]">
+        <select value={judgeId} onChange={(e) => setJudgeId(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Choose judge</option>
+          {judges.map((judge) => (
+            <option key={judge.id} value={judge.id}>{judge.fullName} ({judge.email})</option>
+          ))}
+        </select>
+        <select value={roundId} onChange={(e) => setRoundId(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Choose round</option>
+          {rounds.map((round) => (
+            <option key={round.roundId} value={round.roundId}>{round.roundName}</option>
+          ))}
+        </select>
+        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Choose category</option>
+          {categories.map((category) => (
+            <option key={category.categoryId} value={category.categoryId}>{category.categoryName}</option>
+          ))}
+        </select>
+        <button type="submit" disabled={createAssignment.isPending} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+          <UserCheck className="h-4 w-4" />
+          Assign
+        </button>
+        {formError && <p className="text-sm text-red-600 lg:col-span-4">{formError}</p>}
+      </form>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <th className="px-4 py-3">Judge</th>
+                <th className="px-4 py-3">Round</th>
+                <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {usersLoading || assignmentsLoading ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">Loading assignments...</td></tr>
+              ) : eventAssignments.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">No judge assignments yet</td></tr>
+              ) : (
+                eventAssignments.map((assignment) => (
+                  <tr key={assignment.assignmentId} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium text-slate-800">{assignment.judge.fullName}</p>
+                      <p className="text-xs text-slate-400">{assignment.judge.email}</p>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{assignment.round.roundName}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{assignment.category.categoryName}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => deleteAssignment.mutateAsync(assignment.assignmentId)}
+                        disabled={deleteAssignment.isPending}
+                        className="rounded-lg bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   );
 }
 

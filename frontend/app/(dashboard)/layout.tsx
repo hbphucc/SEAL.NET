@@ -1,20 +1,29 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, hasAnyRole } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const requiredRoles = getRequiredRoles(pathname);
+  const isAuthorized = !requiredRoles || hasAnyRole(requiredRoles);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace("/login");
+      return;
     }
-  }, [isAuthenticated, isLoading, router]);
+
+    if (!isLoading && isAuthenticated && !isAuthorized) {
+      router.replace("/unauthorized");
+    }
+  }, [isAuthenticated, isAuthorized, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -27,7 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!isAuthenticated) return null;
+  if (!isAuthenticated || !isAuthorized) return null;
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
@@ -42,4 +51,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
     </div>
   );
+}
+
+function getRequiredRoles(pathname: string): string[] | null {
+  if (pathname.startsWith("/admin")) return ["Admin"];
+  if (pathname === "/teams" || pathname.startsWith("/teams/")) return ["Admin"];
+  if (pathname.startsWith("/judge")) return ["Judge"];
+  if (pathname === "/submit") return ["Member", "TeamLeader"];
+  if (pathname === "/my-team") return ["Member", "TeamLeader"];
+  if (
+    pathname === "/members" ||
+    pathname === "/team-leaders" ||
+    pathname === "/students" ||
+    pathname === "/eliminations" ||
+    pathname === "/elimination-reasons"
+  ) {
+    return ["Admin"];
+  }
+  return null;
 }

@@ -23,6 +23,9 @@ namespace SEAL.NET.Models.Entities
 
         public ICollection<Team> LedTeams { get; set; } = new List<Team>();
         public ICollection<TeamMember> TeamMemberships { get; set; } = new List<TeamMember>();
+        public ICollection<EventRegistration> EventRegistrations { get; set; } = new List<EventRegistration>();
+        public ICollection<MentorAssignment> MentorAssignments { get; set; } = new List<MentorAssignment>();
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public ICollection<JudgeAssignment> JudgeAssignments { get; set; } = new List<JudgeAssignment>();
         public ICollection<Score> ScoresGiven { get; set; } = new List<Score>();
     }

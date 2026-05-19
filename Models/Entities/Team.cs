@@ -6,10 +6,13 @@ namespace SEAL.NET.Models.Entities
     {
         public Guid TeamId { get; set; } = Guid.NewGuid();
         public string TeamName { get; set; } = string.Empty;
+        public string? Description { get; set; }
         public TeamStatus Status { get; set; } = TeamStatus.Pending;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public string? EliminationReason { get; set; }
+        public string? StatusReason { get; set; }
         public DateTime? EliminatedAt { get; set; }
+        public bool IsArchived { get; set; } = false;
 
         public Guid LeaderId { get; set; }
         public ApplicationUser Leader { get; set; } = null!;
@@ -22,5 +25,8 @@ namespace SEAL.NET.Models.Entities
 
         public List<TeamMember> Members { get; set; } = [];
         public List<Submission> Submissions { get; set; } = [];
+        public List<TeamInvite> Invites { get; set; } = [];
+        public List<MentorAssignment> MentorAssignments { get; set; } = [];
+        public List<MentorshipNote> MentorshipNotes { get; set; } = [];
     }
 }

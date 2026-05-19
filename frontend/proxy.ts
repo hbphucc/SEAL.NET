@@ -1,9 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
+import { decodeJwt } from "jose";
 
-const PUBLIC_ROUTES = ["/login", "/register", "/unauthorized"];
+const PUBLIC_ROUTES = ["/login", "/register", "/unauthorized", "/leaderboard"];
+
+const ROLE_GUARDS: Array<{ path: string; roles: string[] }> = [
+  { path: "/admin", roles: ["Admin"] },
+  { path: "/teams", roles: ["Admin"] },
+  { path: "/members", roles: ["Admin"] },
+  { path: "/team-leaders", roles: ["Admin"] },
+  { path: "/students", roles: ["Admin"] },
+  { path: "/eliminations", roles: ["Admin"] },
+  { path: "/elimination-reasons", roles: ["Admin"] },
+  { path: "/judge", roles: ["Judge"] },
+  { path: "/submit", roles: ["Member", "TeamLeader"] },
+  { path: "/my-team", roles: ["Member", "TeamLeader"] },
+];
 
 function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
+function getRequiredRoles(pathname: string): string[] | null {
+  const guard = ROLE_GUARDS.find(
+    (item) => pathname === item.path || pathname.startsWith(`${item.path}/`)
+  );
+  return guard?.roles ?? null;
+}
+
+function getTokenRoles(token: string): string[] {
+  try {
+    const payload = decodeJwt(token);
+    const roleClaim =
+      payload.role ??
+      payload.roles ??
+      payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+
+    if (Array.isArray(roleClaim)) {
+      return roleClaim.map(String);
+    }
+
+    return roleClaim ? [String(roleClaim)] : [];
+  } catch {
+    return [];
+  }
+}
+
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = decodeJwt(token);
+    return typeof payload.exp === "number" && payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
 }
 
 export async function proxy(request: NextRequest) {
@@ -23,6 +71,22 @@ export async function proxy(request: NextRequest) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (isTokenExpired(token)) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const requiredRoles = getRequiredRoles(pathname);
+  if (requiredRoles) {
+    const tokenRoles = getTokenRoles(token);
+    const hasRequiredRole = requiredRoles.some((role) => tokenRoles.includes(role));
+
+    if (!hasRequiredRole) {
+      return NextResponse.redirect(new URL("/unauthorized", request.url));
+    }
   }
 
   return NextResponse.next();

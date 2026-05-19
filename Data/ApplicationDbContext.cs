@@ -22,6 +22,12 @@ namespace SEAL.NET.Data
         public DbSet<JudgeAssignment> JudgeAssignments { get; set; }
         public DbSet<Score> Scores { get; set; }
         public DbSet<ScoreAuditLog> ScoreAuditLogs { get; set; }
+        public DbSet<EventRegistration> EventRegistrations { get; set; }
+        public DbSet<TeamInvite> TeamInvites { get; set; }
+        public DbSet<MentorAssignment> MentorAssignments { get; set; }
+        public DbSet<MentorshipNote> MentorshipNotes { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
 
         private static DateTime NormalizeUtc(DateTime value)
         {
@@ -59,6 +65,59 @@ namespace SEAL.NET.Data
                 .WithMany(u => u.TeamMemberships)
                 .HasForeignKey(tm => tm.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<EventRegistration>()
+                .HasIndex(er => new { er.EventId, er.UserId })
+                .IsUnique();
+
+            builder.Entity<EventRegistration>()
+                .HasOne(er => er.User)
+                .WithMany(u => u.EventRegistrations)
+                .HasForeignKey(er => er.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<TeamInvite>()
+                .HasIndex(i => new { i.TeamId, i.InvitedUserId, i.Status });
+
+            builder.Entity<TeamInvite>()
+                .HasOne(i => i.InvitedUser)
+                .WithMany()
+                .HasForeignKey(i => i.InvitedUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<TeamInvite>()
+                .HasOne(i => i.InvitedByUser)
+                .WithMany()
+                .HasForeignKey(i => i.InvitedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<MentorAssignment>()
+                .HasIndex(ma => new { ma.TeamId, ma.MentorId })
+                .IsUnique();
+
+            builder.Entity<MentorAssignment>()
+                .HasOne(ma => ma.Mentor)
+                .WithMany(u => u.MentorAssignments)
+                .HasForeignKey(ma => ma.MentorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<MentorshipNote>()
+                .HasOne(note => note.Mentor)
+                .WithMany()
+                .HasForeignKey(note => note.MentorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<AuditLog>()
+                .HasOne(log => log.ActorUser)
+                .WithMany()
+                .HasForeignKey(log => log.ActorUserId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<Score>()
                 .HasOne(s => s.Criteria)
@@ -127,6 +186,19 @@ namespace SEAL.NET.Data
             builder.Entity<TeamMember>()
                 .HasIndex(tm => new { tm.TeamId, tm.UserId })
                 .IsUnique();
+
+            builder.Entity<Team>()
+                .Property(t => t.Status)
+                .HasConversion<string>();
+
+            builder.Entity<TeamMember>()
+                .Property(tm => tm.Role)
+                .HasConversion<string>();
+
+            builder.Entity<TeamInvite>()
+                .Property(ti => ti.Status)
+                .HasConversion<string>();
+
 
             var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
                 value => NormalizeUtc(value),

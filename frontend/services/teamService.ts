@@ -1,9 +1,14 @@
 import api from "@/lib/axios";
+import axios from "axios";
 import {
   Team,
   CreateTeamRequest,
   EliminateTeamRequest,
   AddTeamMemberRequest,
+  InviteTeamMemberRequest,
+  TeamInvite,
+  TransferLeadershipRequest,
+  UpdateTeamRequest,
 } from "@/types/team";
 
 export const teamService = {
@@ -18,13 +23,18 @@ export const teamService = {
     return res.data;
   },
 
-  async adminReject(teamId: string): Promise<{ message: string }> {
-    const res = await api.put<{ message: string }>(`/admin/teams/${teamId}/reject`);
+  async adminReject(teamId: string, reason?: string): Promise<{ message: string }> {
+    const res = await api.put<{ message: string }>(`/admin/teams/${teamId}/reject`, { reason });
     return res.data;
   },
 
   async adminEliminate(teamId: string, data: EliminateTeamRequest): Promise<{ message: string }> {
     const res = await api.put<{ message: string }>(`/admin/teams/${teamId}/eliminate`, data);
+    return res.data;
+  },
+
+  async adminDelete(teamId: string): Promise<{ message: string }> {
+    const res = await api.delete<{ message: string }>(`/admin/teams/${teamId}`);
     return res.data;
   },
 
@@ -34,9 +44,17 @@ export const teamService = {
     return res.data;
   },
 
-  async getMyTeam(): Promise<Team> {
-    const res = await api.get<Team>("/teams/my-team");
-    return res.data;
+  async getMyTeam(): Promise<Team | null> {
+    try {
+      const res = await api.get<Team | null>("/teams/my-team");
+      return res.data;
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        return null;
+      }
+
+      throw err;
+    }
   },
 
   async addMember(teamId: string, data: AddTeamMemberRequest): Promise<{ message: string }> {
@@ -46,6 +64,51 @@ export const teamService = {
 
   async removeMember(teamId: string, userId: string): Promise<{ message: string }> {
     const res = await api.delete<{ message: string }>(`/teams/${teamId}/members/${userId}`);
+    return res.data;
+  },
+
+  async update(teamId: string, data: UpdateTeamRequest): Promise<{ message: string }> {
+    const res = await api.put<{ message: string }>(`/teams/${teamId}`, data);
+    return res.data;
+  },
+
+  async leave(teamId: string): Promise<{ message: string }> {
+    const res = await api.post<{ message: string }>(`/teams/${teamId}/leave`);
+    return res.data;
+  },
+
+  async disband(teamId: string): Promise<{ message: string }> {
+    const res = await api.post<{ message: string }>(`/teams/${teamId}/disband`);
+    return res.data;
+  },
+
+  async transferLeadership(teamId: string, data: TransferLeadershipRequest): Promise<{ message: string }> {
+    const res = await api.post<{ message: string }>(`/teams/${teamId}/transfer-leadership`, data);
+    return res.data;
+  },
+
+  async invite(teamId: string, data: InviteTeamMemberRequest): Promise<{ message: string; teamInviteId: string }> {
+    const res = await api.post<{ message: string; teamInviteId: string }>(`/teams/${teamId}/invites`, data);
+    return res.data;
+  },
+
+  async pendingInvites(): Promise<TeamInvite[]> {
+    const res = await api.get<TeamInvite[]>("/teams/invites/pending");
+    return res.data;
+  },
+
+  async acceptInvite(inviteId: string): Promise<{ message: string }> {
+    const res = await api.post<{ message: string }>(`/teams/invites/${inviteId}/accept`);
+    return res.data;
+  },
+
+  async rejectInvite(inviteId: string): Promise<{ message: string }> {
+    const res = await api.post<{ message: string }>(`/teams/invites/${inviteId}/reject`);
+    return res.data;
+  },
+
+  async cancelInvite(teamId: string, inviteId: string): Promise<{ message: string }> {
+    const res = await api.delete<{ message: string }>(`/teams/${teamId}/invites/${inviteId}`);
     return res.data;
   },
 };

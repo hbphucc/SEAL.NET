@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -149,7 +149,7 @@ export default function RegisterPage() {
                 </select>
               </FormField>
 
-              {/* School name — only for external */}
+              {/* School name - only for external */}
               {studentType === "1" && (
                 <FormField label="University Name" error={errors.schoolName?.message}>
                   <input

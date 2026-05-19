@@ -16,13 +16,20 @@ namespace SEAL.NET.Services.Implementations
             _eventRepository = eventRepository;
         }
 
-        private static DateTime ToUtc(DateTime value)
-        {
-            if (value.Kind == DateTimeKind.Unspecified)
-            {
-                throw new ArgumentException("DateTime must specify a timezone (e.g., append 'Z' for UTC).");
-            }
-            return value.ToUniversalTime();
+        private static DateTime ToUtc(DateTime value)
+
+        {
+
+            if (value.Kind == DateTimeKind.Unspecified)
+
+            {
+
+                throw new ArgumentException("DateTime must specify a timezone (e.g., append 'Z' for UTC).");
+
+            }
+
+            return value.ToUniversalTime();
+
         }
 
         public async Task<List<EventResponseDto>> GetAllEventsAsync()
@@ -104,6 +111,11 @@ namespace SEAL.NET.Services.Implementations
             StartDate = e.StartDate,
             EndDate = e.EndDate,
             Status = e.Status.ToString(),
+            IsPublished = e.IsPublished,
+            IsArchived = e.IsArchived,
+            RegistrationClosedAt = e.RegistrationClosedAt,
+            JudgingStartedAt = e.JudgingStartedAt,
+            JudgingEndedAt = e.JudgingEndedAt,
             Categories = e.Categories.Select(c => new CategoryDto
             {
                 CategoryId = c.CategoryId,

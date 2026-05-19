@@ -6,9 +6,15 @@ import { getErrorMessage } from "@/lib/utils";
 
 export const EVENT_KEYS = {
   all: ["events"] as const,
+  public: ["events", "public"] as const,
+  mine: ["events", "mine"] as const,
   byId: (id: string) => ["events", id] as const,
   categories: (eventId: string) => ["events", eventId, "categories"] as const,
+  categoryById: (eventId: string, categoryId: string) =>
+    ["events", eventId, "categories", categoryId] as const,
   rounds: (eventId: string) => ["events", eventId, "rounds"] as const,
+  roundById: (eventId: string, roundId: string) =>
+    ["events", eventId, "rounds", roundId] as const,
   criteria: (roundId: string) => ["rounds", roundId, "criteria"] as const,
 };
 
@@ -16,6 +22,21 @@ export function useEvents() {
   return useQuery({
     queryKey: EVENT_KEYS.all,
     queryFn: eventService.getAll,
+  });
+}
+
+export function usePublicEvents() {
+  return useQuery({
+    queryKey: EVENT_KEYS.public,
+    queryFn: eventService.getPublic,
+  });
+}
+
+export function useMyEvents(enabled = true) {
+  return useQuery({
+    queryKey: EVENT_KEYS.mine,
+    queryFn: eventService.getMine,
+    enabled,
   });
 }
 
@@ -27,6 +48,49 @@ export function useEvent(id: string) {
   });
 }
 
+function useEventAction(action: (eventId: string) => Promise<{ message: string }>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: action,
+    onSuccess: (data, eventId) => {
+      toast.success(data.message);
+      qc.invalidateQueries({ queryKey: EVENT_KEYS.all });
+      qc.invalidateQueries({ queryKey: EVENT_KEYS.public });
+      qc.invalidateQueries({ queryKey: EVENT_KEYS.byId(eventId) });
+      qc.invalidateQueries({ queryKey: EVENT_KEYS.mine });
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+}
+
+export function usePublishEvent() {
+  return useEventAction(eventService.publish);
+}
+
+export function useCloseRegistration() {
+  return useEventAction(eventService.closeRegistration);
+}
+
+export function useStartJudging() {
+  return useEventAction(eventService.startJudging);
+}
+
+export function useEndJudging() {
+  return useEventAction(eventService.endJudging);
+}
+
+export function useArchiveEvent() {
+  return useEventAction(eventService.archive);
+}
+
+export function useJoinEvent() {
+  return useEventAction(eventService.join);
+}
+
+export function useLeaveEvent() {
+  return useEventAction(eventService.leave);
+}
+
 export function useCategories(eventId: string) {
   return useQuery({
     queryKey: EVENT_KEYS.categories(eventId),
@@ -35,11 +99,27 @@ export function useCategories(eventId: string) {
   });
 }
 
+export function useCategory(eventId: string, categoryId: string) {
+  return useQuery({
+    queryKey: EVENT_KEYS.categoryById(eventId, categoryId),
+    queryFn: () => categoryService.getById(eventId, categoryId),
+    enabled: !!eventId && !!categoryId,
+  });
+}
+
 export function useRounds(eventId: string) {
   return useQuery({
     queryKey: EVENT_KEYS.rounds(eventId),
     queryFn: () => roundService.getByEvent(eventId),
     enabled: !!eventId,
+  });
+}
+
+export function useRound(eventId: string, roundId: string) {
+  return useQuery({
+    queryKey: EVENT_KEYS.roundById(eventId, roundId),
+    queryFn: () => roundService.getById(eventId, roundId),
+    enabled: !!eventId && !!roundId,
   });
 }
 
@@ -107,9 +187,10 @@ export function useUpdateCategory(eventId: string) {
   return useMutation({
     mutationFn: ({ categoryId, data }: { categoryId: string; data: CategoryPayload }) =>
       categoryService.update(eventId, categoryId, data),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       toast.success("Category updated successfully.");
       qc.invalidateQueries({ queryKey: EVENT_KEYS.categories(eventId) });
+      qc.invalidateQueries({ queryKey: EVENT_KEYS.categoryById(eventId, vars.categoryId) });
       qc.invalidateQueries({ queryKey: EVENT_KEYS.byId(eventId) });
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -120,9 +201,10 @@ export function useDeleteCategory(eventId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (categoryId: string) => categoryService.delete(eventId, categoryId),
-    onSuccess: () => {
+    onSuccess: (_, categoryId) => {
       toast.success("Category deleted successfully.");
       qc.invalidateQueries({ queryKey: EVENT_KEYS.categories(eventId) });
+      qc.invalidateQueries({ queryKey: EVENT_KEYS.categoryById(eventId, categoryId) });
       qc.invalidateQueries({ queryKey: EVENT_KEYS.byId(eventId) });
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -147,9 +229,10 @@ export function useUpdateRound(eventId: string) {
   return useMutation({
     mutationFn: ({ roundId, data }: { roundId: string; data: RoundPayload }) =>
       roundService.update(eventId, roundId, data),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       toast.success("Round updated successfully.");
       qc.invalidateQueries({ queryKey: EVENT_KEYS.rounds(eventId) });
+      qc.invalidateQueries({ queryKey: EVENT_KEYS.roundById(eventId, vars.roundId) });
       qc.invalidateQueries({ queryKey: EVENT_KEYS.byId(eventId) });
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -160,13 +243,53 @@ export function useDeleteRound(eventId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (roundId: string) => roundService.delete(eventId, roundId),
-    onSuccess: () => {
+    onSuccess: (_, roundId) => {
       toast.success("Round deleted successfully.");
       qc.invalidateQueries({ queryKey: EVENT_KEYS.rounds(eventId) });
+      qc.invalidateQueries({ queryKey: EVENT_KEYS.roundById(eventId, roundId) });
       qc.invalidateQueries({ queryKey: EVENT_KEYS.byId(eventId) });
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
+}
+
+function useRoundAction(action: (roundId: string) => Promise<{ message: string }>, eventId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: action,
+    onSuccess: (data) => {
+      toast.success(data.message);
+      if (eventId) {
+        qc.invalidateQueries({ queryKey: EVENT_KEYS.rounds(eventId) });
+        qc.invalidateQueries({ queryKey: EVENT_KEYS.byId(eventId) });
+      }
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+}
+
+export function useOpenRound(eventId?: string) {
+  return useRoundAction(roundService.open, eventId);
+}
+
+export function useCloseRound(eventId?: string) {
+  return useRoundAction(roundService.close, eventId);
+}
+
+export function useLockSubmissions(eventId?: string) {
+  return useRoundAction(roundService.lockSubmissions, eventId);
+}
+
+export function usePublishRoundResult(eventId?: string) {
+  return useRoundAction(roundService.publishResult, eventId);
+}
+
+export function useReopenRound(eventId?: string) {
+  return useRoundAction(roundService.reopen, eventId);
+}
+
+export function useAdvanceRound(eventId?: string) {
+  return useRoundAction(roundService.advance, eventId);
 }
 
 export function useCreateCriteria(roundId: string) {

@@ -1,4 +1,4 @@
-import { Medal } from "lucide-react";
+﻿import { Medal } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { RankingRow } from "@/types/ranking";
 

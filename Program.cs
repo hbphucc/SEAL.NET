@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using SEAL.NET.Data;
+using SEAL.NET.Middleware;
 using SEAL.NET.Models.Entities;
 using SEAL.NET.Repositories.Implementations;
 using SEAL.NET.Repositories.Interfaces;
@@ -13,6 +14,7 @@ using SEAL.NET.Services.Implementations;
 using SEAL.NET.Services.Interfaces;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 const string SecurityStampClaimType = "seal_security_stamp";
@@ -41,7 +43,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
+builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+{
+    options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+})
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
@@ -78,15 +85,10 @@ builder.Services.AddAuthentication(options =>
     {
 
         OnMessageReceived = context =>
-
         {
-
             if (context.Request.Cookies.TryGetValue("seal_token", out var token))
-
             {
-
                 context.Token = token;
-
             }
             return Task.CompletedTask;
         },
@@ -154,7 +156,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    }); ;
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -197,6 +203,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 
@@ -225,6 +233,25 @@ app.Use(async (context, next) =>
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/health", async (ApplicationDbContext dbContext, ILoggerFactory loggerFactory) =>
+{
+    var logger = loggerFactory.CreateLogger("HealthCheck");
+    try
+    {
+        var canConnect = await dbContext.Database.CanConnectAsync();
+        return canConnect
+            ? Results.Ok(new { status = "Healthy", database = "Healthy" })
+            : Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Health check failed.");
+        return Results.Json(
+            new { status = "Unhealthy", database = "Unhealthy" },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).AllowAnonymous();
 
 app.MapControllers();
 

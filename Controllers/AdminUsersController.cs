@@ -24,6 +24,7 @@ namespace SEAL.NET.Controllers
             "Mentor"
         };
 
+
         public AdminUsersController(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<Guid>> roleManager)
@@ -113,6 +114,7 @@ namespace SEAL.NET.Controllers
             return Ok(new { message = "User approved successfully." });
         }
 
+
         [HttpPut("{userId}/reject")]
         public async Task<IActionResult> RejectUser(Guid userId)
         {
@@ -135,6 +137,7 @@ namespace SEAL.NET.Controllers
 
             return Ok(new { message = "User rejected successfully." });
         }
+
 
         [HttpPut("{userId}/role")]
         public async Task<IActionResult> UpdateUserRole(Guid userId, [FromBody] UpdateUserRoleRequest request)
@@ -182,6 +185,7 @@ namespace SEAL.NET.Controllers
             });
         }
 
+
         [HttpDelete("{userId}")]
         public async Task<IActionResult> DeleteUser(Guid userId)
         {
@@ -202,6 +206,7 @@ namespace SEAL.NET.Controllers
 
             return Ok(new { message = "User deleted successfully." });
         }
+
 
         private async Task<bool> IsLastApprovedAdminAsync(ApplicationUser user)
         {

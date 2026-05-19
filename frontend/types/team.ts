@@ -4,12 +4,15 @@ export type TeamStatus =
   | "Active"
   | "Eliminated"
   | "Withdrawn"
-  | "Champion";
+  | "Champion"
+  | "Archived";
 
 export interface TeamMember {
   userId: string;
   fullName: string;
   email: string;
+  role?: "Member" | "Leader";
+  isLeader?: boolean;
 }
 
 export interface TeamCategory {
@@ -20,12 +23,12 @@ export interface TeamCategory {
 export interface TeamRound {
   roundId: string;
   roundName: string;
-  submissionDeadline?: string;
 }
 
 export interface Team {
   teamId: string;
   teamName: string;
+  description?: string | null;
   status: TeamStatus;
   leaderId?: string;
   category: TeamCategory;
@@ -33,6 +36,7 @@ export interface Team {
   members: TeamMember[];
   createdAt?: string;
   eliminationReason?: string | null;
+  statusReason?: string | null;
   eliminatedAt?: string | null;
 }
 
@@ -48,4 +52,31 @@ export interface EliminateTeamRequest {
 
 export interface AddTeamMemberRequest {
   userId: string;
+}
+
+export interface UpdateTeamRequest {
+  teamName: string;
+  description?: string;
+  categoryId: string;
+}
+
+export interface InviteTeamMemberRequest {
+  userId?: string;
+  email?: string;
+}
+
+export interface TeamInvite {
+  teamInviteId: string;
+  createdAt: string;
+  expiresAt: string;
+  status: "Pending" | "Accepted" | "Rejected" | "Cancelled" | "Expired";
+  team: {
+    teamId: string;
+    teamName: string;
+    category: string;
+  };
+}
+
+export interface TransferLeadershipRequest {
+  newLeaderUserId: string;
 }

@@ -8,6 +8,9 @@ namespace SEAL.NET.Models.Entities
         public string? DemoUrl { get; set; }
         public string? SlideUrl { get; set; }
         public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt { get; set; }
+        public DateTime? WithdrawnAt { get; set; }
+        public bool IsWithdrawn { get; set; } = false;
 
         public Guid RoundId { get; set; }
         public Round Round { get; set; } = null!;

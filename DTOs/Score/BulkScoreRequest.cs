@@ -10,6 +10,8 @@ namespace SEAL.NET.DTOs.Score
         [Required]
         [MinLength(1)]
         public List<BulkScoreItemRequest> Scores { get; set; } = [];
+
+        public bool SubmitFinal { get; set; } = false;
     }
 
 

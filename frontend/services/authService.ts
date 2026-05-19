@@ -1,5 +1,5 @@
 import api from "@/lib/axios";
-import { AuthUser, LoginRequest, RegisterRequest } from "@/types/auth";
+import { AuthUser, LoginRequest, LoginResponse, RegisterRequest } from "@/types/auth";
 
 
 function notifyAuthChanged() {
@@ -8,9 +8,10 @@ function notifyAuthChanged() {
 }
 
 export const authService = {
-  async login(data: LoginRequest): Promise<void> {
-    await api.post("/auth/login", data);
+  async login(data: LoginRequest): Promise<LoginResponse> {
+    const res = await api.post<LoginResponse>("/auth/login", data);
     notifyAuthChanged();
+    return res.data;
   },
 
   async register(data: RegisterRequest): Promise<{ message: string }> {

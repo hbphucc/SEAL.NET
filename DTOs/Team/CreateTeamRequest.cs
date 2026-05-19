@@ -10,6 +10,6 @@ namespace SEAL.NET.DTOs.Team
         [Required]
         public Guid CategoryId { get; set; }
 
-        public List<Guid> MemberIds { get; set; } = new();
+        public List<string> MemberStudentCodes { get; set; } = new();
     }
 }

@@ -66,10 +66,16 @@ namespace SEAL.NET.Controllers
 
             if (submission == null)
                 return NotFound(new { message = "Submission not found." });
-
             var publishedResult = RejectIfRankingPublished(submission);
+
             if (publishedResult != null)
                 return publishedResult;
+
+            if (submission.IsWithdrawn || submission.Team!.Status == Models.Enums.TeamStatus.Eliminated)
+                return BadRequest(new { message = "Cannot score withdrawn or eliminated submissions." });
+
+            if (submission.Round!.Status != Models.Enums.RoundStatus.Locked && submission.Round.Status != Models.Enums.RoundStatus.Closed)
+                return BadRequest(new { message = "Round is not ready for judging." });
 
             var criteria = await _context.Criteria
                 .FirstOrDefaultAsync(c =>
@@ -97,12 +103,17 @@ namespace SEAL.NET.Controllers
 
             if (existingScore != null)
             {
+                if (existingScore.IsFinal)
+                    return Conflict(new { message = "Finalized scores are locked." });
+
                 var oldScoreValue = existingScore.ScoreValue;
                 var oldComment = existingScore.Comment;
 
                 existingScore.ScoreValue = request.ScoreValue;
                 existingScore.Comment = request.Comment;
                 existingScore.CreatedAt = DateTime.UtcNow;
+                existingScore.IsFinal = request.SubmitFinal;
+                existingScore.FinalizedAt = request.SubmitFinal ? DateTime.UtcNow : null;
 
                 AddScoreAuditLog(
                     existingScore,
@@ -123,7 +134,9 @@ namespace SEAL.NET.Controllers
                 JudgeId = judgeId,
                 CriteriaId = request.CriteriaId,
                 ScoreValue = request.ScoreValue,
-                Comment = request.Comment
+                Comment = request.Comment,
+                IsFinal = request.SubmitFinal,
+                FinalizedAt = request.SubmitFinal ? DateTime.UtcNow : null
             };
 
             _context.Scores.Add(score);
@@ -154,8 +167,15 @@ namespace SEAL.NET.Controllers
                 return NotFound(new { message = "Submission not found." });
 
             var publishedResult = RejectIfRankingPublished(submission);
+
             if (publishedResult != null)
                 return publishedResult;
+
+            if (submission.IsWithdrawn || submission.Team!.Status == Models.Enums.TeamStatus.Eliminated)
+                return BadRequest(new { message = "Cannot score withdrawn or eliminated submissions." });
+
+            if (submission.Round!.Status != Models.Enums.RoundStatus.Locked && submission.Round.Status != Models.Enums.RoundStatus.Closed)
+                return BadRequest(new { message = "Round is not ready for judging." });
 
             var isAssigned = await _context.JudgeAssignments.AnyAsync(a =>
                 a.JudgeId == judgeId &&
@@ -238,12 +258,17 @@ namespace SEAL.NET.Controllers
             {
                 if (existingByCriteriaId.TryGetValue(item.CriteriaId, out var existingScore))
                 {
+                    if (existingScore.IsFinal)
+                        return Conflict(new { message = "Finalized scores are locked.", existingScore.CriteriaId });
+
                     var oldScoreValue = existingScore.ScoreValue;
                     var oldComment = existingScore.Comment;
 
                     existingScore.ScoreValue = item.ScoreValue;
                     existingScore.Comment = item.Comment;
                     existingScore.CreatedAt = DateTime.UtcNow;
+                    existingScore.IsFinal = request.SubmitFinal;
+                    existingScore.FinalizedAt = request.SubmitFinal ? DateTime.UtcNow : null;
 
                     AddScoreAuditLog(
                         existingScore,
@@ -269,7 +294,9 @@ namespace SEAL.NET.Controllers
                     JudgeId = judgeId,
                     CriteriaId = item.CriteriaId,
                     ScoreValue = item.ScoreValue,
-                    Comment = item.Comment
+                    Comment = item.Comment,
+                    IsFinal = request.SubmitFinal,
+                    FinalizedAt = request.SubmitFinal ? DateTime.UtcNow : null
                 };
 
                 _context.Scores.Add(score);
@@ -301,6 +328,7 @@ namespace SEAL.NET.Controllers
             });
         }
 
+
         [HttpGet("my-assigned-submissions")]
         public async Task<IActionResult> GetMyAssignedSubmissions()
         {
@@ -319,7 +347,9 @@ namespace SEAL.NET.Controllers
                 .Include(s => s.Round)
                 .Where(s =>
                     roundIds.Contains(s.RoundId) &&
-                    categoryIds.Contains(s.Team!.CategoryId))
+                    categoryIds.Contains(s.Team!.CategoryId) &&
+                    !s.IsWithdrawn &&
+                    s.Team.Status != Models.Enums.TeamStatus.Eliminated)
                 .Select(s => new
                 {
                     s.SubmissionId,

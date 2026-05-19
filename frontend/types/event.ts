@@ -1,4 +1,15 @@
-export type EventStatus = "Upcoming" | "Ongoing" | "Completed" | "Cancelled";
+export type EventStatus =
+  | "Draft"
+  | "Upcoming"
+  | "RegistrationClosed"
+  | "Judging"
+  | "RankingPublished"
+  | "Ongoing"
+  | "Completed"
+  | "Cancelled"
+  | "Archived";
+
+export type RoundStatus = "Draft" | "Open" | "Closed" | "Locked" | "ResultsPublished";
 
 export interface Event {
   eventId: string;
@@ -7,6 +18,11 @@ export interface Event {
   status: EventStatus;
   startDate: string;
   endDate: string;
+  isPublished?: boolean;
+  isArchived?: boolean;
+  registrationClosedAt?: string | null;
+  judgingStartedAt?: string | null;
+  judgingEndedAt?: string | null;
   categories?: Category[];
   rounds?: Round[];
 }
@@ -22,10 +38,13 @@ export interface Category {
 export interface Round {
   roundId: string;
   roundName: string;
-  submissionDeadline: string;
+  submissionDeadline?: string | null;
   roundOrder: number;
   maxTeamsAdvancing: number;
   eventId?: string;
+  status?: RoundStatus;
+  isRankingPublished?: boolean;
+  isSubmissionLocked?: boolean;
 }
 
 export interface Criteria {

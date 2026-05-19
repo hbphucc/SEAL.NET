@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
@@ -170,7 +170,7 @@ export default function DataTable<T extends Record<string, any>>({
                       >
                         {col.render
                           ? col.render(row[col.key], row)
-                          : String(row[col.key] ?? "—")}
+                          : String(row[col.key] ?? "-")}
                       </td>
                     ))}
                     {actions && (

@@ -9,6 +9,14 @@ export interface RankingRow {
 }
 
 export interface AdvanceRoundDetails {
+  fromRound?: {
+    roundId: string;
+    roundName: string;
+  };
+  toRound?: {
+    roundId: string;
+    roundName: string;
+  };
   expectedScoreCount?: number;
   actualScoreCount?: number;
   missingScoreCount?: number;

@@ -16,7 +16,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      const publicAuthRoutes = ["/login", "/register", "/unauthorized"];
+      const publicAuthRoutes = ["/login", "/register", "/unauthorized", "/leaderboard"];
       const isPublicAuthRoute = publicAuthRoutes.some(
         (route) => window.location.pathname === route || window.location.pathname.startsWith(`${route}/`)
       );

@@ -26,4 +26,9 @@ export interface AuthUser {
   roles: UserRole[];
 }
 
+export interface LoginResponse {
+  message: string;
+  user: AuthUser;
+}
+
 export type StudentType = 0 | 1;

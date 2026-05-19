@@ -1,4 +1,4 @@
-import { UserRole } from "@/types/auth";
+﻿import { UserRole } from "@/types/auth";
 
 export const APP_NAME = "SEAL.NET";
 

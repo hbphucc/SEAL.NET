@@ -15,6 +15,8 @@ namespace SEAL.NET.Models.Entities
         public decimal ScoreValue { get; set; }   
         public string? Comment { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsFinal { get; set; } = false;
+        public DateTime? FinalizedAt { get; set; }
 
         [ForeignKey(nameof(SubmissionId))]
         public Submission? Submission { get; set; }

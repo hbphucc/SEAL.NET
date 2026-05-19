@@ -11,9 +11,15 @@ namespace SEAL.NET.Models.Entities
         public DateTime EndDate { get; set; }
         public EventStatus Status { get; set; } = EventStatus.Upcoming;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsPublished { get; set; } = false;
+        public bool IsArchived { get; set; } = false;
+        public DateTime? RegistrationClosedAt { get; set; }
+        public DateTime? JudgingStartedAt { get; set; }
+        public DateTime? JudgingEndedAt { get; set; }
 
 
         public List<Category> Categories { get; set; } = new();
         public List<Round> Rounds { get; set; } = new();
+        public List<EventRegistration> Registrations { get; set; } = new();
     }
 }

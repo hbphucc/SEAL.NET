@@ -1,14 +1,14 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAdminTeams, useApproveTeam, useRejectTeam, useEliminateTeam } from "@/hooks/useTeams";
+import { useAdminTeams, useApproveTeam, useRejectTeam, useEliminateTeam, useDeleteTeam } from "@/hooks/useTeams";
 import { Team, TeamStatus } from "@/types/team";
 import DataTable from "@/components/shared/DataTable";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import PageHeader from "@/components/shared/PageHeader";
-import { Trophy, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Trophy, CheckCircle, XCircle, AlertTriangle, Trash2 } from "lucide-react";
 import { TEAM_STATUS_LABELS } from "@/lib/constants";
 import Link from "next/link";
 
@@ -20,10 +20,12 @@ export default function TeamsPage() {
   const approveMutation = useApproveTeam();
   const rejectMutation = useRejectTeam();
   const eliminateMutation = useEliminateTeam();
+  const deleteMutation = useDeleteTeam();
 
   const [approveTarget, setApproveTarget] = useState<Team | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Team | null>(null);
   const [eliminateTarget, setEliminateTarget] = useState<Team | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Team | null>(null);
   const [eliminationReason, setEliminationReason] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TeamStatus>("all");
 
@@ -76,14 +78,14 @@ export default function TeamsPage() {
       key: "category",
       label: "Category",
       render: (_: unknown, row: Team) => (
-        <span className="text-sm text-slate-600">{row.category?.categoryName ?? "—"}</span>
+        <span className="text-sm text-slate-600">{row.category?.categoryName ?? "-"}</span>
       ),
     },
     {
       key: "currentRound",
       label: "Current Round",
       render: (_: unknown, row: Team) => (
-        <span className="text-sm text-slate-600">{row.currentRound?.roundName ?? "—"}</span>
+        <span className="text-sm text-slate-600">{row.currentRound?.roundName ?? "-"}</span>
       ),
     },
     {
@@ -113,7 +115,7 @@ export default function TeamsPage() {
       label: "Elimination Reason",
       render: (_: unknown, row: Team) => (
         <span className="text-xs text-slate-500 max-w-[120px] truncate block">
-          {row.eliminationReason ?? "—"}
+          {row.eliminationReason ?? "-"}
         </span>
       ),
     },
@@ -178,6 +180,14 @@ export default function TeamsPage() {
             >
               View
             </Link>
+            {row.status === "Pending" && (
+              <button
+                onClick={() => setDeleteTarget(row)}
+                className="flex items-center gap-1 px-2 py-1.5 text-xs rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </button>
+            )}
           </>
         ) : undefined}
       />
@@ -204,6 +214,20 @@ export default function TeamsPage() {
         confirmLabel="Reject"
         variant="warning"
         isLoading={rejectMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={async () => {
+          await deleteMutation.mutateAsync(deleteTarget!.teamId);
+          setDeleteTarget(null);
+        }}
+        title="Delete Team"
+        description={`Delete team "${deleteTarget?.teamName}"? Teams with submissions cannot be deleted.`}
+        confirmLabel="Delete"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
       />
 
       {/* Eliminate */}

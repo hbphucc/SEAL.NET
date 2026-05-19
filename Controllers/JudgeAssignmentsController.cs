@@ -94,6 +94,21 @@ namespace SEAL.NET.Controllers
             };
 
             _context.JudgeAssignments.Add(assignment);
+            _context.Notifications.Add(new Notification
+            {
+                UserId = request.JudgeId,
+                Type = "JudgeAssigned",
+                Title = "Judge assignment",
+                Message = "You have been assigned submissions to judge.",
+                Link = "/judge/dashboard"
+            });
+            _context.AuditLogs.Add(new AuditLog
+            {
+                Action = "JudgeAssigned",
+                EntityType = "JudgeAssignment",
+                EntityId = assignment.AssignmentId,
+                Details = $"Round={request.RoundId};Category={request.CategoryId};Judge={request.JudgeId}"
+            });
             await _context.SaveChangesAsync();
 
             return Ok(new

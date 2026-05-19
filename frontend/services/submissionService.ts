@@ -16,4 +16,14 @@ export const submissionService = {
     const res = await api.get<Submission[]>(`/submissions/round/${roundId}`);
     return res.data;
   },
+
+  async getById(submissionId: string): Promise<Submission> {
+    const res = await api.get<Submission>(`/submissions/${submissionId}`);
+    return res.data;
+  },
+
+  async withdraw(submissionId: string): Promise<{ message: string }> {
+    const res = await api.post<{ message: string }>(`/submissions/${submissionId}/withdraw`);
+    return res.data;
+  },
 };

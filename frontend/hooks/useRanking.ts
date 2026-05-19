@@ -53,6 +53,7 @@ export function useAdvanceRound() {
     mutationFn: (roundId: string) => rankingService.advanceRound(roundId),
     onSuccess: (data, roundId) => {
       toast.success(data.message);
+      qc.invalidateQueries({ queryKey: ["ranking", "admin"] });
       qc.invalidateQueries({ queryKey: RANKING_KEYS.adminRound(roundId) });
       qc.invalidateQueries({ queryKey: ["teams"] });
       qc.invalidateQueries({ queryKey: ["events"] });
