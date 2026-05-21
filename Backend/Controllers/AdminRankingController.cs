@@ -23,7 +23,10 @@ namespace SEAL.NET.Controllers
         private async Task<IActionResult?> EnsureRoundExistsAsync(Guid roundId)
         {
             var exists = await _context.Rounds.AnyAsync(r => r.RoundId == roundId);
-            return exists ? null : NotFound(new { message = "Round not found." });
+            return exists ? null : NotFound(new 
+            { 
+                message = "Round not found." 
+            });
         }
 
         [HttpGet("round/{roundId}")]

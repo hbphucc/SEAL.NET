@@ -30,6 +30,7 @@ namespace SEAL.NET.Controllers
         {
             var round = await _context.Rounds.Include(r => r.Event).FirstOrDefaultAsync(r => r.RoundId == roundId);
             if (round == null) return NotFound(new { message = "Round not found." });
+
             if (round.Event.IsArchived) return BadRequest(new { message = "Cannot open a round for an archived event." });
 
             round.Status = RoundStatus.Open;
@@ -44,13 +45,19 @@ namespace SEAL.NET.Controllers
         public async Task<IActionResult> CloseRound(Guid roundId)
         {
             var round = await _context.Rounds.FirstOrDefaultAsync(r => r.RoundId == roundId);
+
             if (round == null) return NotFound(new { message = "Round not found." });
+
             if (round.Status != RoundStatus.Open) return BadRequest(new { message = "Only open rounds can be closed." });
 
             round.Status = RoundStatus.Closed;
+
             await AddAuditAsync("RoundClosed", roundId);
+
             await NotifyTeamLeadersAsync(round.EventId, "RoundClosed", "Round closed", $"{round.RoundName} is closed.");
+
             await _context.SaveChangesAsync();
+
             return Ok(new { message = "Round closed successfully." });
         }
 
@@ -58,12 +65,15 @@ namespace SEAL.NET.Controllers
         public async Task<IActionResult> LockSubmissions(Guid roundId)
         {
             var round = await _context.Rounds.FirstOrDefaultAsync(r => r.RoundId == roundId);
+
             if (round == null) return NotFound(new { message = "Round not found." });
+
             if (round.Status == RoundStatus.Draft || round.Status == RoundStatus.Open)
                 return BadRequest(new { message = "Close the round before locking submissions." });
 
             round.IsSubmissionLocked = true;
             round.Status = RoundStatus.Locked;
+
             await AddAuditAsync("RoundSubmissionsLocked", roundId);
             await _context.SaveChangesAsync();
             return Ok(new { message = "Round submissions locked successfully." });
