@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +31,7 @@ namespace SEAL.NET.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             return Guid.Parse(userId!);
         }
+
         private async Task<ApplicationUser?> FindUserByStudentCodeAsync(string studentCode)
         {
             var normalizedStudentCode = studentCode.Trim().ToUpper();
@@ -80,9 +81,15 @@ namespace SEAL.NET.Controllers
                     requestedStudentCodes.Contains(u.StudentCode.ToUpper()))
                 .ToListAsync();
 
-            if (members.Count != requestedStudentCodes.Count)
-                return BadRequest(new { message = "One or more student codes are invalid." });
+            var foundStudentCodes = members
+                .Where(u => u.StudentCode != null)
+                .Select(u => u.StudentCode!.ToUpper())
+                .ToList();
 
+            var missingStudentCodes = requestedStudentCodes.Except(foundStudentCodes).ToList();
+
+            if (missingStudentCodes.Any())
+                return BadRequest(new { message = $"One or more student codes are invalid or not found: {string.Join(", ", missingStudentCodes)}" });
 
             var allMemberIds = members
                 .Select(u => u.Id)
@@ -302,7 +309,7 @@ namespace SEAL.NET.Controllers
             var user = await FindUserByStudentCodeAsync(request.StudentCode);
 
             if (user == null)
-                return NotFound(new { message = "User not found." });
+                return NotFound(new { message = $"User with Student Code '{request.StudentCode}' was not found." });
 
             if (!user.IsApproved)
                 return BadRequest(new { message = "This user has not been approved yet." });
@@ -380,7 +387,7 @@ namespace SEAL.NET.Controllers
             }
 
             if (user == null)
-                return NotFound(new { message = "User not found." });
+                return NotFound(new { message = $"User with Student Code '{request.StudentCode}' was not found." });
             if (!user.IsApproved)
                 return BadRequest(new { message = "This user has not been approved yet." });
             if (user.Id == currentUserId)
@@ -489,7 +496,7 @@ namespace SEAL.NET.Controllers
 
             var user = await FindUserByStudentCodeAsync(studentCode);
             if (user == null)
-                return NotFound(new { message = "User not found." });
+                return NotFound(new { message = $"User with Student Code '{studentCode}' was not found." });
 
             var team = await _context.Teams
                 .Include(t => t.Members)

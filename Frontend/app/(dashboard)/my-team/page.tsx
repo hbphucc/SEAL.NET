@@ -15,8 +15,6 @@ import { formatDate, getErrorMessage } from "@/lib/utils";
 import { Category } from "@/types/event";
 import { TeamMember } from "@/types/team";
 
-const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 export default function MyTeamPage() {
   const { user, hasRole } = useAuth();
   const canHaveTeam = hasRole("Member") || hasRole("TeamLeader");
@@ -28,7 +26,7 @@ export default function MyTeamPage() {
   const [teamName, setTeamName] = useState("");
   const [selectedEventId, setSelectedEventId] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [memberIdsText, setMemberIdsText] = useState("");
+  const [memberStudentCodesText, setMemberStudentCodesText] = useState("");
   const [createError, setCreateError] = useState("");
   const [removeTarget, setRemoveTarget] = useState<TeamMember | null>(null);
 
@@ -64,7 +62,7 @@ export default function MyTeamPage() {
     e.preventDefault();
     setCreateError("");
 
-    const memberIds = memberIdsText
+    const memberStudentCodes = memberStudentCodesText
       .split(/[\s,]+/)
       .map((value) => value.trim())
       .filter(Boolean);
@@ -79,14 +77,22 @@ export default function MyTeamPage() {
       return;
     }
 
-    if (memberIds.length < 2 || memberIds.length > 4) {
-      setCreateError("Enter 2 to 4 teammate user IDs. You are added as leader automatically.");
+    if (memberStudentCodes.length < 2 || memberStudentCodes.length > 4) {
+      setCreateError("Enter 2 to 4 teammate student codes. You are added as leader automatically.");
       return;
     }
 
-    const invalidMemberId = memberIds.find((memberId) => !guidPattern.test(memberId));
-    if (invalidMemberId) {
-      setCreateError(`"${invalidMemberId}" is not a valid user ID.`);
+    // Prevent duplicates case-insensitively
+    const normalizedCodes = memberStudentCodes.map((code) => code.toUpperCase());
+    const uniqueCodes = new Set(normalizedCodes);
+    if (uniqueCodes.size !== memberStudentCodes.length) {
+      setCreateError("Duplicate student codes are not allowed.");
+      return;
+    }
+
+    // Prevent user from entering their own student code as a teammate
+    if (user?.studentCode && normalizedCodes.includes(user.studentCode.toUpperCase())) {
+      setCreateError("You cannot include your own student code as a team member.");
       return;
     }
 
@@ -94,7 +100,7 @@ export default function MyTeamPage() {
       await createTeam.mutateAsync({
         teamName: teamName.trim(),
         categoryId,
-        memberIds,
+        memberStudentCodes,
       });
     } catch (err) {
       setCreateError(getErrorMessage(err));
@@ -113,7 +119,7 @@ export default function MyTeamPage() {
   if (!myTeam) {
     return (
       <div className="space-y-6">
-        <PageHeader title="My Team" description="Create a team and invite teammates by user ID" icon={Trophy} />
+        <PageHeader title="My Team" description="Create a team and invite teammates by Student Code" icon={Trophy} />
         <PendingInvitesPanel enabled={canHaveTeam} />
         <form onSubmit={handleCreateTeam} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="grid gap-4 lg:grid-cols-2">
@@ -156,12 +162,12 @@ export default function MyTeamPage() {
               </select>
             </label>
             <label className="lg:col-span-2">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">Teammate User IDs</span>
+              <span className="mb-1.5 block text-sm font-medium text-slate-700">Teammate Student Codes</span>
               <textarea
-                value={memberIdsText}
-                onChange={(e) => setMemberIdsText(e.target.value)}
+                value={memberStudentCodesText}
+                onChange={(e) => setMemberStudentCodesText(e.target.value)}
                 rows={4}
-                placeholder="Paste 2 to 4 user IDs, separated by commas or new lines"
+                placeholder="Enter student codes separated by commas or new lines"
                 className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </label>
@@ -233,7 +239,10 @@ export default function MyTeamPage() {
                     {member.fullName.charAt(0)}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-800">{member.fullName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-slate-800">{member.fullName}</p>
+                      <span className="text-xs font-mono text-slate-400">({member.studentCode})</span>
+                    </div>
                     <p className="text-xs text-slate-400">{member.email}</p>
                   </div>
                 </div>
@@ -257,7 +266,7 @@ export default function MyTeamPage() {
         open={!!removeTarget}
         onClose={() => setRemoveTarget(null)}
         onConfirm={async () => {
-          await removeMember.mutateAsync({ teamId: myTeam.teamId, userId: removeTarget!.userId });
+          await removeMember.mutateAsync({ teamId: myTeam.teamId, studentCode: removeTarget!.studentCode });
           setRemoveTarget(null);
         }}
         title="Remove Member"

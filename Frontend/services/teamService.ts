@@ -62,8 +62,8 @@ export const teamService = {
     return res.data;
   },
 
-  async removeMember(teamId: string, userId: string): Promise<{ message: string }> {
-    const res = await api.delete<{ message: string }>(`/teams/${teamId}/members/${userId}`);
+  async removeMember(teamId: string, studentCode: string): Promise<{ message: string }> {
+    const res = await api.delete<{ message: string }>(`/teams/${teamId}/members/${studentCode}`);
     return res.data;
   },
 

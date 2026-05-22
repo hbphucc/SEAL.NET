@@ -55,7 +55,7 @@ export function useCreateTeam() {
 export function useAddTeamMember() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ teamId, data }: { teamId: string; data: { userId: string } }) =>
+    mutationFn: ({ teamId, data }: { teamId: string; data: { studentCode: string } }) =>
       teamService.addMember(teamId, data),
     onSuccess: (data) => {
       toast.success(data.message);
@@ -209,8 +209,8 @@ export function useDeleteTeam() {
 export function useRemoveTeamMember() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ teamId, userId }: { teamId: string; userId: string }) =>
-      teamService.removeMember(teamId, userId),
+    mutationFn: ({ teamId, studentCode }: { teamId: string; studentCode: string }) =>
+      teamService.removeMember(teamId, studentCode),
     onSuccess: (data) => {
       toast.success(data.message);
       qc.invalidateQueries({ queryKey: TEAM_KEYS.all });

@@ -9,6 +9,7 @@ export type TeamStatus =
 
 export interface TeamMember {
   userId: string;
+  studentCode: string;
   fullName: string;
   email: string;
   role?: "Member" | "Leader";
@@ -43,7 +44,7 @@ export interface Team {
 export interface CreateTeamRequest {
   teamName: string;
   categoryId: string;
-  memberIds: string[];
+  memberStudentCodes: string[];
 }
 
 export interface EliminateTeamRequest {
@@ -51,7 +52,7 @@ export interface EliminateTeamRequest {
 }
 
 export interface AddTeamMemberRequest {
-  userId: string;
+  studentCode: string;
 }
 
 export interface UpdateTeamRequest {
@@ -61,7 +62,7 @@ export interface UpdateTeamRequest {
 }
 
 export interface InviteTeamMemberRequest {
-  userId?: string;
+  studentCode?: string;
   email?: string;
 }
 
@@ -78,5 +79,5 @@ export interface TeamInvite {
 }
 
 export interface TransferLeadershipRequest {
-  newLeaderUserId: string;
+  newLeaderStudentCode: string;
 }

@@ -5,7 +5,6 @@ import { MailPlus } from "lucide-react";
 import { useInviteTeamMember } from "@/hooks/useTeams";
 import { getErrorMessage } from "@/lib/utils";
 
-const guidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface TeamInvitePanelProps {
@@ -15,7 +14,7 @@ interface TeamInvitePanelProps {
 
 export default function TeamInvitePanel({ teamId, disabled = false }: TeamInvitePanelProps) {
   const inviteMember = useInviteTeamMember();
-  const [mode, setMode] = useState<"email" | "userId">("email");
+  const [mode, setMode] = useState<"email" | "studentCode">("email");
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
 
@@ -25,7 +24,7 @@ export default function TeamInvitePanel({ teamId, disabled = false }: TeamInvite
 
     const trimmed = value.trim();
     if (!trimmed) {
-      setError(mode === "email" ? "Email is required." : "User ID is required.");
+      setError(mode === "email" ? "Email is required." : "Student Code is required.");
       return;
     }
 
@@ -34,15 +33,10 @@ export default function TeamInvitePanel({ teamId, disabled = false }: TeamInvite
       return;
     }
 
-    if (mode === "userId" && !guidPattern.test(trimmed)) {
-      setError("Enter a valid user ID.");
-      return;
-    }
-
     try {
       await inviteMember.mutateAsync({
         teamId,
-        data: mode === "email" ? { email: trimmed } : { userId: trimmed },
+        data: mode === "email" ? { email: trimmed } : { studentCode: trimmed },
       });
       setValue("");
     } catch (err) {
@@ -55,10 +49,10 @@ export default function TeamInvitePanel({ teamId, disabled = false }: TeamInvite
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-slate-800">Invite Member</h3>
-          <p className="text-xs text-slate-400">Send an invitation by email or user ID.</p>
+          <p className="text-xs text-slate-400">Send an invitation by email or Student Code.</p>
         </div>
         <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-          {(["email", "userId"] as const).map((item) => (
+          {(["email", "studentCode"] as const).map((item) => (
             <button
               key={item}
               type="button"
@@ -73,7 +67,7 @@ export default function TeamInvitePanel({ teamId, disabled = false }: TeamInvite
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {item === "email" ? "Email" : "User ID"}
+              {item === "email" ? "Email" : "Student Code"}
             </button>
           ))}
         </div>
@@ -83,7 +77,7 @@ export default function TeamInvitePanel({ teamId, disabled = false }: TeamInvite
         <input
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          placeholder={mode === "email" ? "teammate@example.com" : "User ID"}
+          placeholder={mode === "email" ? "teammate@example.com" : "Student Code"}
           disabled={disabled || inviteMember.isPending}
           className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
         />
