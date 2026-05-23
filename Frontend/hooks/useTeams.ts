@@ -219,3 +219,17 @@ export function useRemoveTeamMember() {
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 }
+
+export function useTransferLeadership() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teamId, data }: { teamId: string; data: { newLeaderStudentCode: string } }) =>
+      teamService.transferLeadership(teamId, data),
+    onSuccess: (data) => {
+      toast.success(data.message);
+      qc.invalidateQueries({ queryKey: TEAM_KEYS.all });
+      qc.invalidateQueries({ queryKey: TEAM_KEYS.myTeam });
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+}

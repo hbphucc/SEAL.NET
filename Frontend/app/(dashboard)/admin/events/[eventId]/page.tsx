@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Edit, Layers, ListChecks, Plus, Trash2, UserCheck } from "lucide-react";
+import { ArrowLeft, Edit, Layers, ListChecks, Plus, Trash2, UserCheck, Play, XCircle, Lock, RefreshCw, CheckSquare, ArrowRight } from "lucide-react";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DataTable from "@/components/shared/DataTable";
 import PageHeader from "@/components/shared/PageHeader";
@@ -22,11 +22,17 @@ import {
   useUpdateCategory,
   useUpdateCriteria,
   useUpdateRound,
+  useOpenRound,
+  useCloseRound,
+  useLockSubmissions,
+  usePublishRoundResult,
+  useReopenRound,
+  useAdvanceRound,
 } from "@/hooks/useEvents";
 import { useCreateJudgeAssignment, useDeleteJudgeAssignment, useJudgeAssignments } from "@/hooks/useJudges";
 import { useUsers } from "@/hooks/useUsers";
 import { formatDate } from "@/lib/utils";
-import { Category, CategoryPayload, Criteria, CriteriaPayload, Round, RoundPayload } from "@/types/event";
+import { Category, CategoryPayload, Criteria, CriteriaPayload, Round, RoundPayload, RoundStatus } from "@/types/event";
 
 type CategoryFormState = {
   categoryName: string;
@@ -104,6 +110,13 @@ export default function AdminEventSetupPage() {
   const updateRound = useUpdateRound(eventId);
   const deleteRound = useDeleteRound(eventId);
 
+  const openRound = useOpenRound(eventId);
+  const closeRound = useCloseRound(eventId);
+  const lockSubmissions = useLockSubmissions(eventId);
+  const publishRound = usePublishRoundResult(eventId);
+  const reopenRound = useReopenRound(eventId);
+  const advanceRound = useAdvanceRound(eventId);
+
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryForm, setCategoryForm] = useState<CategoryFormState>(EMPTY_CATEGORY);
@@ -115,6 +128,29 @@ export default function AdminEventSetupPage() {
   const [roundForm, setRoundForm] = useState<RoundFormState>(EMPTY_ROUND);
   const [roundError, setRoundError] = useState("");
   const [deleteRoundTarget, setDeleteRoundTarget] = useState<Round | null>(null);
+
+  const [confirmRoundAction, setConfirmRoundAction] = useState<{
+    round: Round;
+    type: "close" | "publish" | "advance";
+  } | null>(null);
+
+  function getRoundStatusBadgeColor(status?: RoundStatus, isLocked?: boolean) {
+    if (isLocked) return "bg-red-50 text-red-700 border-red-200";
+    switch (status) {
+      case "Draft":
+        return "bg-slate-50 text-slate-700 border-slate-200";
+      case "Open":
+        return "bg-green-50 text-green-700 border-green-200";
+      case "Closed":
+        return "bg-amber-50 text-amber-700 border-amber-200";
+      case "Locked":
+        return "bg-red-50 text-red-700 border-red-200";
+      case "ResultsPublished":
+        return "bg-purple-50 text-purple-700 border-purple-200";
+      default:
+        return "bg-slate-50 text-slate-700 border-slate-200";
+    }
+  }
 
   if (!isAdmin) {
     return (
@@ -255,6 +291,21 @@ export default function AdminEventSetupPage() {
       sortable: true,
       render: (_: unknown, row: Round) => <span className="text-sm text-slate-600">{row.maxTeamsAdvancing} teams</span>,
     },
+    {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      render: (_: unknown, row: Round) => {
+        const statusVal = row.status ?? "Draft";
+        return (
+          <div className="flex flex-col gap-1 items-start">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getRoundStatusBadgeColor(row.status, row.isSubmissionLocked)}`}>
+              {statusVal}
+            </span>
+          </div>
+        );
+      },
+    },
   ];
 
   return (
@@ -321,16 +372,87 @@ export default function AdminEventSetupPage() {
           searchPlaceholder="Search rounds..."
           isLoading={roundsLoading}
           emptyMessage="No rounds configured"
-          actions={(row: Round) => (
-            <>
-              <button onClick={() => openEditRound(row)} className="flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
-                <Edit className="h-3.5 w-3.5" /> Edit
-              </button>
-              <button onClick={() => setDeleteRoundTarget(row)} className="flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100">
-                <Trash2 className="h-3.5 w-3.5" /> Delete
-              </button>
-            </>
-          )}
+          actions={(row: Round) => {
+            const status = row.status ?? "Draft";
+            const isMutationPending =
+              openRound.isPending ||
+              closeRound.isPending ||
+              lockSubmissions.isPending ||
+              reopenRound.isPending ||
+              publishRound.isPending ||
+              advanceRound.isPending;
+
+            return (
+              <>
+                {status === "Draft" && (
+                  <button
+                    disabled={isMutationPending}
+                    onClick={() => openRound.mutate(row.roundId)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-2 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50 transition-all animate-fade-in"
+                  >
+                    <Play className="h-3 w-3" /> Open
+                  </button>
+                )}
+
+                {status === "Open" && (
+                  <button
+                    disabled={isMutationPending}
+                    onClick={() => setConfirmRoundAction({ round: row, type: "close" })}
+                    className="inline-flex items-center gap-1 rounded-lg bg-orange-50 px-2 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 disabled:opacity-50 transition-all animate-fade-in"
+                  >
+                    <XCircle className="h-3 w-3" /> Close
+                  </button>
+                )}
+
+                {(status === "Closed" || status === "Locked") && (
+                  <button
+                    disabled={isMutationPending}
+                    onClick={() => reopenRound.mutate(row.roundId)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50 transition-all animate-fade-in"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Reopen
+                  </button>
+                )}
+
+                {status === "Closed" && !row.isSubmissionLocked && (
+                  <button
+                    disabled={isMutationPending}
+                    onClick={() => lockSubmissions.mutate(row.roundId)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-all animate-fade-in"
+                  >
+                    <Lock className="h-3 w-3" /> Lock Submissions
+                  </button>
+                )}
+
+                {(status === "Closed" || status === "Locked") && !row.isRankingPublished && (
+                  <button
+                    disabled={isMutationPending}
+                    onClick={() => setConfirmRoundAction({ round: row, type: "publish" })}
+                    className="inline-flex items-center gap-1 rounded-lg bg-purple-50 px-2 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 transition-all animate-fade-in"
+                  >
+                    <CheckSquare className="h-3 w-3" /> Publish Results
+                  </button>
+                )}
+
+                {status === "ResultsPublished" && (
+                  <button
+                    disabled={isMutationPending}
+                    onClick={() => setConfirmRoundAction({ round: row, type: "advance" })}
+                    className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 transition-all animate-fade-in"
+                  >
+                    <ArrowRight className="h-3 w-3" /> Advance Teams
+                  </button>
+                )}
+
+                <button onClick={() => openEditRound(row)} className="flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-all">
+                  <Edit className="h-3.5 w-3.5" /> Edit
+                </button>
+                <button onClick={() => setDeleteRoundTarget(row)} className="flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-all">
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                </button>
+              </>
+            );
+          }}
         />
       </section>
 
@@ -430,6 +552,48 @@ export default function AdminEventSetupPage() {
         confirmLabel="Delete"
         variant="danger"
         isLoading={deleteRound.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!confirmRoundAction}
+        onClose={() => setConfirmRoundAction(null)}
+        onConfirm={async () => {
+          if (!confirmRoundAction) return;
+          const { round, type } = confirmRoundAction;
+          if (type === "close") {
+            await closeRound.mutateAsync(round.roundId);
+          } else if (type === "publish") {
+            await publishRound.mutateAsync(round.roundId);
+          } else if (type === "advance") {
+            await advanceRound.mutateAsync(round.roundId);
+          }
+          setConfirmRoundAction(null);
+        }}
+        title={
+          confirmRoundAction?.type === "close"
+            ? "Close Round"
+            : confirmRoundAction?.type === "publish"
+            ? "Publish Results"
+            : "Advance Teams"
+        }
+        description={
+          confirmRoundAction?.type === "close"
+            ? `Are you sure you want to close "${confirmRoundAction?.round?.roundName}"? This will stop teams from creating submissions.`
+            : confirmRoundAction?.type === "publish"
+            ? `Are you sure you want to publish results for "${confirmRoundAction?.round?.roundName}"? This will freeze the scores and make the results public.`
+            : `Are you sure you want to advance teams for "${confirmRoundAction?.round?.roundName}"? This will calculate qualifications and advance the top teams to the next round.`
+        }
+        confirmLabel={
+          confirmRoundAction?.type === "close"
+            ? "Close"
+            : confirmRoundAction?.type === "publish"
+            ? "Publish"
+            : "Advance"
+        }
+        variant={confirmRoundAction?.type === "advance" ? "default" : "danger"}
+        isLoading={
+          closeRound.isPending || publishRound.isPending || advanceRound.isPending
+        }
       />
     </div>
   );

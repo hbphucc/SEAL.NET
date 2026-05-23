@@ -2,14 +2,22 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { Plus, Send, Trash2, Trophy, Users } from "lucide-react";
+import { Plus, Send, Trash2, Trophy, Users, Edit, LogOut, Award } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import PendingInvitesPanel from "@/components/team/PendingInvitesPanel";
 import TeamInvitePanel from "@/components/team/TeamInvitePanel";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCreateTeam, useMyTeam, useRemoveTeamMember } from "@/hooks/useTeams";
+import {
+  useCreateTeam,
+  useMyTeam,
+  useRemoveTeamMember,
+  useUpdateTeam,
+  useLeaveTeam,
+  useDisbandTeam,
+  useTransferLeadership,
+} from "@/hooks/useTeams";
 import { useEvents } from "@/hooks/useEvents";
 import { formatDate, getErrorMessage } from "@/lib/utils";
 import { Category } from "@/types/event";
@@ -22,6 +30,10 @@ export default function MyTeamPage() {
   const { data: events = [], isLoading: eventsLoading } = useEvents();
   const createTeam = useCreateTeam();
   const removeMember = useRemoveTeamMember();
+  const updateTeam = useUpdateTeam();
+  const leaveTeam = useLeaveTeam();
+  const disbandTeam = useDisbandTeam();
+  const transferLeadership = useTransferLeadership();
 
   const [teamName, setTeamName] = useState("");
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -29,6 +41,20 @@ export default function MyTeamPage() {
   const [memberStudentCodesText, setMemberStudentCodesText] = useState("");
   const [createError, setCreateError] = useState("");
   const [removeTarget, setRemoveTarget] = useState<TeamMember | null>(null);
+
+  // Modals and confirmation states
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [editTeamName, setEditTeamName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editError, setEditError] = useState("");
+
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferTargetStudentCode, setTransferTargetStudentCode] = useState("");
+  const [transferError, setTransferError] = useState("");
+
+  const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false);
+  const [confirmDisbandOpen, setConfirmDisbandOpen] = useState(false);
 
   const selectedEvent = events.find((event) => event.eventId === selectedEventId);
   const availableCategories = selectedEvent?.categories ?? [];
@@ -49,6 +75,25 @@ export default function MyTeamPage() {
     myTeam.status !== "Eliminated" &&
     myTeam.status !== "Archived";
   const canSubmit = isLeader && myTeam?.status === "Approved" && !!myTeam.currentRound;
+
+  const isEliminatedOrArchived = myTeam
+    ? myTeam.status === "Eliminated" || myTeam.status === "Archived" || myTeam.status === "Withdrawn"
+    : false;
+
+  const myTeamEvent = myTeam
+    ? events.find((event) => event.categories?.some((cat) => cat.categoryId === myTeam.category.categoryId))
+    : null;
+  const myTeamAvailableCategories = myTeamEvent?.categories ?? [];
+  const potentialLeaders = myTeam ? myTeam.members.filter((m) => m.userId !== myTeam.leaderId) : [];
+
+  const openUpdateModal = () => {
+    if (!myTeam) return;
+    setEditTeamName(myTeam.teamName);
+    setEditDescription(myTeam.description || "");
+    setEditCategoryId(myTeam.category.categoryId);
+    setEditError("");
+    setUpdateModalOpen(true);
+  };
 
   if (!canHaveTeam) {
     return (
@@ -104,6 +149,32 @@ export default function MyTeamPage() {
       });
     } catch (err) {
       setCreateError(getErrorMessage(err));
+    }
+  }
+
+  async function handleUpdateTeam(e: FormEvent) {
+    e.preventDefault();
+    setEditError("");
+    if (!editTeamName.trim()) {
+      setEditError("Team name is required.");
+      return;
+    }
+    if (!editCategoryId) {
+      setEditError("Category is required.");
+      return;
+    }
+    try {
+      await updateTeam.mutateAsync({
+        teamId: myTeam!.teamId,
+        data: {
+          teamName: editTeamName.trim(),
+          description: editDescription.trim() || undefined,
+          categoryId: editCategoryId,
+        },
+      });
+      setUpdateModalOpen(false);
+    } catch (err) {
+      setEditError(getErrorMessage(err));
     }
   }
 
@@ -195,12 +266,57 @@ export default function MyTeamPage() {
         description={myTeam.category?.categoryName}
         icon={Trophy}
         actions={
-          canSubmit ? (
-            <Link href="/submit" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
-              <Send className="h-4 w-4" />
-              Submit Project
-            </Link>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            {canSubmit && (
+              <Link href="/submit" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-all">
+                <Send className="h-4 w-4" />
+                Submit Project
+              </Link>
+            )}
+            {!isEliminatedOrArchived && (
+              <>
+                {isLeader ? (
+                  <>
+                    <button
+                      onClick={openUpdateModal}
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Update Team
+                    </button>
+                    {potentialLeaders.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setTransferTargetStudentCode("");
+                          setTransferError("");
+                          setTransferModalOpen(true);
+                        }}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all"
+                      >
+                        <Users className="h-4 w-4" />
+                        Transfer Leadership
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setConfirmDisbandOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 transition-all"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Disband Team
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setConfirmLeaveOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100 transition-all"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Leave Team
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         }
       />
 
@@ -219,6 +335,12 @@ export default function MyTeamPage() {
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Deadline</p>
           <p className="font-semibold text-slate-900">{currentRoundDeadline ? formatDate(currentRoundDeadline) : "Not configured"}</p>
         </div>
+        {myTeam.description && (
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-3">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Team Description</p>
+            <p className="text-slate-700 text-sm whitespace-pre-wrap">{myTeam.description}</p>
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -249,7 +371,7 @@ export default function MyTeamPage() {
                 {memberIsLeader ? (
                   <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Leader</span>
                 ) : canEditMembers ? (
-                  <button onClick={() => setRemoveTarget(member)} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100">
+                  <button onClick={() => setRemoveTarget(member)} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-all">
                     <Trash2 className="h-3.5 w-3.5" /> Remove
                   </button>
                 ) : null}
@@ -275,6 +397,161 @@ export default function MyTeamPage() {
         variant="danger"
         isLoading={removeMember.isPending}
       />
+
+      <ConfirmDialog
+        open={confirmLeaveOpen}
+        onClose={() => setConfirmLeaveOpen(false)}
+        onConfirm={async () => {
+          await leaveTeam.mutateAsync(myTeam.teamId);
+          setConfirmLeaveOpen(false);
+        }}
+        title="Leave Team"
+        description="Are you sure you want to leave this team? This action cannot be undone."
+        confirmLabel="Leave Team"
+        variant="danger"
+        isLoading={leaveTeam.isPending}
+      />
+
+      <ConfirmDialog
+        open={confirmDisbandOpen}
+        onClose={() => setConfirmDisbandOpen(false)}
+        onConfirm={async () => {
+          await disbandTeam.mutateAsync(myTeam.teamId);
+          setConfirmDisbandOpen(false);
+        }}
+        title="Disband Team"
+        description="Are you sure you want to disband this team? All members will be removed, and the team will be permanently deleted."
+        confirmLabel="Disband Team"
+        variant="danger"
+        isLoading={disbandTeam.isPending}
+      />
+
+      {updateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setUpdateModalOpen(false)} />
+          <form onSubmit={handleUpdateTeam} className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-semibold text-slate-900">Update Team Details</h2>
+            <div className="mt-5 space-y-4">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700">Team Name</span>
+                <input
+                  value={editTeamName}
+                  onChange={(e) => setEditTeamName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700">Description</span>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={3}
+                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700">Category</span>
+                <select
+                  value={editCategoryId}
+                  onChange={(e) => setEditCategoryId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Choose category</option>
+                  {myTeamAvailableCategories.map((category) => (
+                    <option key={category.categoryId} value={category.categoryId}>
+                      {category.categoryName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {editError && <p className="mt-4 text-sm text-red-600">{editError}</p>}
+            <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setUpdateModalOpen(false)}
+                disabled={updateTeam.isPending}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updateTeam.isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {updateTeam.isPending ? "Updating..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {transferModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setTransferModalOpen(false)} />
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setTransferError("");
+              if (!transferTargetStudentCode) {
+                setTransferError("Please select a member to transfer leadership to.");
+                return;
+              }
+              try {
+                await transferLeadership.mutateAsync({
+                  teamId: myTeam.teamId,
+                  data: { newLeaderStudentCode: transferTargetStudentCode },
+                });
+                setTransferModalOpen(false);
+              } catch (err) {
+                setTransferError(getErrorMessage(err));
+              }
+            }}
+            className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+          >
+            <h2 className="text-lg font-semibold text-slate-900">Transfer Leadership</h2>
+            <p className="mt-2 text-sm text-slate-500">
+              Select a teammate to transfer the team leadership. You will become a regular team member, and this action cannot be undone.
+            </p>
+            <div className="mt-5 space-y-4">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-slate-700">Teammate</span>
+                <select
+                  value={transferTargetStudentCode}
+                  onChange={(e) => setTransferTargetStudentCode(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a teammate</option>
+                  {potentialLeaders.map((m) => (
+                    <option key={m.studentCode} value={m.studentCode}>
+                      {m.fullName} ({m.studentCode})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {transferError && <p className="mt-4 text-sm text-red-600">{transferError}</p>}
+            <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setTransferModalOpen(false)}
+                disabled={transferLeadership.isPending}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={transferLeadership.isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {transferLeadership.isPending ? "Transferring..." : "Confirm Transfer"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
