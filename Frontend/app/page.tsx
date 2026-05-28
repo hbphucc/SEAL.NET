@@ -1,5 +1,5 @@
-﻿import { redirect } from "next/navigation";
+import PublicEventsPage from "./events/page";
 
 export default function HomePage() {
-  redirect("/dashboard");
+  return <PublicEventsPage />;
 }

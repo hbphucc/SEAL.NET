@@ -40,6 +40,7 @@ namespace SEAL.NET.Controllers
             var events = await _context.Events
                 .Where(e => e.IsPublished && !e.IsArchived)
                 .Include(e => e.Categories)
+                    .ThenInclude(c => c.Teams)
                 .Include(e => e.Rounds)
                 .OrderByDescending(e => e.CreatedAt)
                 .Select(e => new
@@ -51,7 +52,14 @@ namespace SEAL.NET.Controllers
                     e.EndDate,
                     status = e.Status.ToString(),
                     e.IsPublished,
-                    categories = e.Categories.Select(c => new { c.CategoryId, c.CategoryName, c.Description }),
+                    totalTeams = e.Categories.SelectMany(c => c.Teams).Count(),
+                    categories = e.Categories.Select(c => new
+                    {
+                        c.CategoryId,
+                        c.CategoryName,
+                        c.Description,
+                        teamCount = c.Teams.Count
+                    }),
                     rounds = e.Rounds.OrderBy(r => r.RoundOrder).Select(r => new
                     {
                         r.RoundId,

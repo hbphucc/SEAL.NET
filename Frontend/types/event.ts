@@ -23,6 +23,7 @@ export interface Event {
   registrationClosedAt?: string | null;
   judgingStartedAt?: string | null;
   judgingEndedAt?: string | null;
+  totalTeams?: number;
   categories?: Category[];
   rounds?: Round[];
 }

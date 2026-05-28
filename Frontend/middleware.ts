@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decodeJwt } from "jose";
 
-const PUBLIC_ROUTES = ["/login", "/register", "/unauthorized", "/leaderboard"];
+const PUBLIC_ROUTES = ["/", "/login", "/register", "/unauthorized", "/leaderboard", "/events"];
 
 const ROLE_GUARDS = [
   { path: "/admin", roles: ["Admin"] },

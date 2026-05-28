@@ -27,14 +27,17 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPublicAuthRoute =
+    pathname === "/" ||
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/unauthorized" ||
     pathname === "/leaderboard" ||
+    pathname === "/events" ||
     pathname.startsWith("/login/") ||
     pathname.startsWith("/register/") ||
     pathname.startsWith("/unauthorized/") ||
-    pathname.startsWith("/leaderboard/");
+    pathname.startsWith("/leaderboard/") ||
+    pathname.startsWith("/events/");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(!isPublicAuthRoute);
 
