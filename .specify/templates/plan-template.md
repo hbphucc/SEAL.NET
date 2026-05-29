@@ -40,7 +40,18 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **Domain Workflow Integrity**: Identify affected competition roles, state
+  transitions, failure states, and scoring/ranking impact.
+- **Security and Role Boundaries**: Document authentication, authorization, token,
+  secret, and safe error-response requirements.
+- **API Contract Discipline**: List REST endpoints, DTOs, validation rules,
+  structured errors, Swagger/OpenAPI impact, and frontend service changes.
+- **Testable Business Behavior**: Define required unit, integration, API, or UI
+  validation; document any test omission with rationale.
+- **Observability and Auditability**: Define required audit records, structured
+  logs, health signals, and exception-handling behavior.
+- **Architecture Standards**: Confirm use of the established Backend/Frontend
+  stack and justify any new architectural layer or dependency.
 
 ## Project Structure
 
@@ -77,20 +88,25 @@ tests/
 ├── integration/
 └── unit/
 
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+# [REMOVE IF UNUSED] Option 2: SEAL.NET web application
+Backend/
+├── Controllers/
+├── DTOs/
+├── Models/
+├── Repositories/
+├── Services/
+├── Middleware/
+├── Data/
+└── Tests/SEAL.NET.Tests/
 
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
+Frontend/
+├── app/
+├── components/
+├── contexts/
+├── hooks/
+├── lib/
+├── services/
+└── types/
 
 # [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
 api/

@@ -92,16 +92,26 @@
 - **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **FR-006**: System MUST enforce role-based access for [Admin/Judge/Member/TeamLeader/Mentor]
+- **FR-007**: System MUST record audit or logging evidence for [outcome-affecting action]
 
 *Example of marking unclear requirements:*
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+- **FR-008**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
+- **FR-009**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
 
 ### Key Entities *(include if feature involves data)*
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
+
+### Security, Audit & Contracts *(mandatory for SEAL.NET features)*
+
+- **Roles impacted**: [Admin/Judge/Member/TeamLeader/Mentor/N/A with rationale]
+- **Authorization rules**: [Server-side access rules and denied-case behavior]
+- **API contracts**: [Endpoints, DTOs, validation, and structured error behavior]
+- **Audit/logging**: [Events, score/ranking impact, approvals, eliminations, auth failures]
+- **Sensitive data**: [Secrets, tokens, PII, submission data handling]
 
 ## Success Criteria *(mandatory)*
 

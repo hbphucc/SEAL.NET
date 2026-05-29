@@ -9,7 +9,10 @@ description: "Task list template for feature implementation"
 
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: Tests are REQUIRED for changed business behavior, authorization,
+persistence, scoring, ranking, approval, submission, and API contract behavior.
+Only omit tests for documentation-only or purely visual changes, and record the
+rationale in the generated task list.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -22,7 +25,7 @@ description: "Task list template for feature implementation"
 ## Path Conventions
 
 - **Single project**: `src/`, `tests/` at repository root
-- **Web app**: `backend/src/`, `frontend/src/`
+- **SEAL.NET web app**: `Backend/`, `Backend/Tests/SEAL.NET.Tests/`, `Frontend/`
 - **Mobile**: `api/src/`, `ios/src/` or `android/src/`
 - Paths shown below assume single project - adjust based on plan.md structure
 
@@ -67,7 +70,7 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T005 [P] Implement authentication/authorization framework
 - [ ] T006 [P] Setup API routing and middleware structure
 - [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
+- [ ] T008 Configure centralized error handling, structured logging, and audit infrastructure
 - [ ] T009 Setup environment configuration management
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
@@ -80,21 +83,22 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 1 ⚠️
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T010 [P] [US1] Backend test for [business rule/API behavior] in Backend/Tests/SEAL.NET.Tests/[TestClass].cs
+- [ ] T011 [P] [US1] Authorization or integration test for [user journey] in Backend/Tests/SEAL.NET.Tests/[TestClass].cs
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
-- [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T016 [US1] Add validation and error handling
-- [ ] T017 [US1] Add logging for user story 1 operations
+- [ ] T012 [P] [US1] Create or update [Entity1] model in Backend/Models/[Entity1].cs
+- [ ] T013 [P] [US1] Create or update [DTO] in Backend/DTOs/[Dto].cs
+- [ ] T014 [US1] Implement [Service] in Backend/Services/[Service].cs (depends on T012, T013)
+- [ ] T015 [US1] Implement [endpoint/feature] in Backend/Controllers/[Controller].cs
+- [ ] T016 [US1] Add validation, authorization, and structured error handling
+- [ ] T017 [US1] Add audit/logging for user story 1 operations
+- [ ] T018 [US1] Update frontend service/types/UI in Frontend/[path] if user-visible
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -106,17 +110,17 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 2 ⚠️
 
-- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T019 [P] [US2] Backend test for [business rule/API behavior] in Backend/Tests/SEAL.NET.Tests/[TestClass].cs
+- [ ] T020 [P] [US2] Authorization or integration test for [user journey] in Backend/Tests/SEAL.NET.Tests/[TestClass].cs
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
-- [ ] T021 [US2] Implement [Service] in src/services/[service].py
-- [ ] T022 [US2] Implement [endpoint/feature] in src/[location]/[file].py
-- [ ] T023 [US2] Integrate with User Story 1 components (if needed)
+- [ ] T021 [P] [US2] Create or update [Entity/DTO] in Backend/[path]
+- [ ] T022 [US2] Implement [Service] in Backend/Services/[Service].cs
+- [ ] T023 [US2] Implement [endpoint/feature] in Backend/Controllers/[Controller].cs
+- [ ] T024 [US2] Integrate with User Story 1 components (if needed)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -128,16 +132,16 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 3 ⚠️
 
-- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T025 [P] [US3] Backend test for [business rule/API behavior] in Backend/Tests/SEAL.NET.Tests/[TestClass].cs
+- [ ] T026 [P] [US3] Authorization or integration test for [user journey] in Backend/Tests/SEAL.NET.Tests/[TestClass].cs
 
 ### Implementation for User Story 3
 
-- [ ] T026 [P] [US3] Create [Entity] model in src/models/[entity].py
-- [ ] T027 [US3] Implement [Service] in src/services/[service].py
-- [ ] T028 [US3] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T027 [P] [US3] Create or update [Entity/DTO] in Backend/[path]
+- [ ] T028 [US3] Implement [Service] in Backend/Services/[Service].cs
+- [ ] T029 [US3] Implement [endpoint/feature] in Backend/Controllers/[Controller].cs
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -154,8 +158,10 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX [P] Documentation updates in docs/
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
-- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
+- [ ] TXXX [P] Additional xUnit coverage in Backend/Tests/SEAL.NET.Tests/
 - [ ] TXXX Security hardening
+- [ ] TXXX Audit/logging review for outcome-affecting actions
+- [ ] TXXX Frontend lint/build validation in Frontend/
 - [ ] TXXX Run quickstart.md validation
 
 ---
@@ -179,7 +185,7 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Within Each User Story
 
-- Tests (if included) MUST be written and FAIL before implementation
+- Required tests MUST be written and FAIL before implementation
 - Models before services
 - Services before endpoints
 - Core implementation before integration
@@ -199,13 +205,13 @@ Examples of foundational tasks (adjust based on your project):
 ## Parallel Example: User Story 1
 
 ```bash
-# Launch all tests for User Story 1 together (if tests requested):
-Task: "Contract test for [endpoint] in tests/contract/test_[name].py"
-Task: "Integration test for [user journey] in tests/integration/test_[name].py"
+# Launch all required tests for User Story 1 together:
+Task: "Backend test for [business rule/API behavior] in Backend/Tests/SEAL.NET.Tests/[TestClass].cs"
+Task: "Authorization or integration test for [user journey] in Backend/Tests/SEAL.NET.Tests/[TestClass].cs"
 
-# Launch all models for User Story 1 together:
-Task: "Create [Entity1] model in src/models/[entity1].py"
-Task: "Create [Entity2] model in src/models/[entity2].py"
+# Launch independent model/DTO work for User Story 1 together:
+Task: "Create or update [Entity1] model in Backend/Models/[Entity1].cs"
+Task: "Create or update [DTO] in Backend/DTOs/[Dto].cs"
 ```
 
 ---
