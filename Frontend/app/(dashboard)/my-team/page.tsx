@@ -76,7 +76,10 @@ export default function MyTeamPage() {
   const canSubmit = isLeader && myTeam?.status === "Approved" && !!myTeam.currentRound;
 
   const isEliminatedOrArchived = myTeam
-    ? myTeam.status === "Eliminated" || myTeam.status === "Archived" || myTeam.status === "Withdrawn"
+    ? myTeam.status === "Eliminated" ||
+      myTeam.status === "Archived" ||
+      myTeam.status === "Withdrawn" ||
+      myTeam.status === "Rejected"
     : false;
 
   const myTeamEvent = myTeam
@@ -338,6 +341,12 @@ export default function MyTeamPage() {
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-3">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Team Description</p>
             <p className="text-slate-700 text-sm whitespace-pre-wrap">{myTeam.description}</p>
+          </div>
+        )}
+        {myTeam.status === "Rejected" && myTeam.statusReason && (
+          <div className="rounded-xl border border-orange-200 bg-orange-50 p-5 shadow-sm lg:col-span-3">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-orange-700">Rejection Reason</p>
+            <p className="text-sm text-orange-800">{myTeam.statusReason}</p>
           </div>
         )}
       </div>

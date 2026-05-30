@@ -34,6 +34,8 @@ export const TEAM_STATUS_LABELS: Record<string, string> = {
   Eliminated: "Eliminated",
   Withdrawn: "Withdrawn",
   Champion: "Champion",
+  Archived: "Archived",
+  Rejected: "Rejected",
 };
 
 export const EVENT_STATUS_LABELS: Record<string, string> = {

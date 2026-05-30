@@ -27,6 +27,7 @@ export function getTeamStatusColor(status: TeamStatus): string {
     Withdrawn: "bg-gray-100 text-gray-600 border-gray-200",
     Champion: "bg-purple-100 text-purple-700 border-purple-200",
     Archived: "bg-slate-100 text-slate-600 border-slate-200",
+    Rejected: "bg-orange-100 text-orange-700 border-orange-200",
   };
   return map[status] ?? "bg-gray-100 text-gray-600 border-gray-200";
 }

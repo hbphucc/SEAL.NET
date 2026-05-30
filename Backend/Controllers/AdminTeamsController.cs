@@ -57,6 +57,7 @@ namespace SEAL.NET.Controllers
                     t.TeamName,
                     t.LeaderId,
                     t.CreatedAt,
+                    t.StatusReason,
                     t.EliminationReason,
                     t.EliminatedAt,
                     status = t.Status.ToString(),
@@ -142,10 +143,13 @@ namespace SEAL.NET.Controllers
             if (team == null)
                 return NotFound(new { message = "Team not found." });
 
-            team.Status = TeamStatus.Eliminated;
+            if (team.Status != TeamStatus.Pending)
+                return BadRequest(new { message = "Only pending teams can be rejected." });
+
+            team.Status = TeamStatus.Rejected;
             team.StatusReason = request?.Reason;
-            team.EliminationReason = request?.Reason;
-            team.EliminatedAt = DateTime.UtcNow;
+            team.EliminationReason = null;
+            team.EliminatedAt = null;
 
             foreach (var member in team.Members)
             {
@@ -186,6 +190,9 @@ namespace SEAL.NET.Controllers
 
             if (team.Status == TeamStatus.Eliminated)
                 return BadRequest(new { message = "Team is already eliminated." });
+
+            if (team.Status == TeamStatus.Pending || team.Status == TeamStatus.Rejected)
+                return BadRequest(new { message = "Only approved or active teams can be eliminated." });
 
             team.Status = TeamStatus.Eliminated;
             team.EliminationReason = request.Reason;

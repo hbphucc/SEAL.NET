@@ -92,6 +92,17 @@ public class AdminTeamsControllerTests
             new TeamMember { TeamId = team.TeamId, UserId = Guid.NewGuid() });
     }
 
+    private static string? GetMessage(IActionResult result)
+    {
+        var value = result switch
+        {
+            ObjectResult objectResult => objectResult.Value,
+            _ => null
+        };
+
+        return value?.GetType().GetProperty("message")?.GetValue(value)?.ToString();
+    }
+
     [Fact]
     public async Task ApproveTeam_AddsTeamLeaderRoleAndUpdatesSecurityStamp()
     {
@@ -120,7 +131,7 @@ public class AdminTeamsControllerTests
         using var context = CreateContext();
         var userManager = CreateUserManager(context);
         var leader = CreateLeader();
-        var team = CreateTeam(leader.Id);
+        var team = CreateTeam(leader.Id, TeamStatus.Pending);
 
         await SeedTeamLeaderRoleAsync(context, userManager, leader);
         context.Teams.Add(team);
@@ -133,6 +144,59 @@ public class AdminTeamsControllerTests
         Assert.IsType<OkObjectResult>(result);
         Assert.False(await userManager.IsInRoleAsync(leader, "TeamLeader"));
         Assert.NotEqual(beforeStamp, await userManager.GetSecurityStampAsync(leader));
+        Assert.Equal(TeamStatus.Rejected, team.Status);
+        Assert.Null(team.EliminationReason);
+        Assert.Null(team.EliminatedAt);
+    }
+
+    [Fact]
+    public async Task RejectTeam_WhenPending_SetsRejectedStatusWithoutEliminationFields()
+    {
+        using var context = CreateContext();
+        var userManager = CreateUserManager(context);
+        var leader = CreateLeader();
+        var team = CreateTeam(leader.Id, TeamStatus.Pending);
+
+        await SeedTeamLeaderRoleAsync(context, userManager, leader);
+        context.Teams.Add(team);
+        await context.SaveChangesAsync();
+
+        var controller = new AdminTeamsController(context, userManager);
+        var result = await controller.RejectTeam(team.TeamId, new TeamDecisionRequest { Reason = "Missing eligibility proof" });
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(TeamStatus.Rejected, team.Status);
+        Assert.Equal("Missing eligibility proof", team.StatusReason);
+        Assert.Null(team.EliminationReason);
+        Assert.Null(team.EliminatedAt);
+        Assert.Contains(context.AuditLogs, log =>
+            log.Action == "TeamRejected" &&
+            log.EntityId == team.TeamId &&
+            log.Details == "Missing eligibility proof");
+    }
+
+    [Fact]
+    public async Task RejectTeam_WhenNotPending_ReturnsBadRequestAndKeepsStatus()
+    {
+        using var context = CreateContext();
+        var userManager = CreateUserManager(context);
+        var leader = CreateLeader();
+        var team = CreateTeam(leader.Id, TeamStatus.Approved);
+
+        await SeedTeamLeaderRoleAsync(context, userManager, leader);
+        context.Teams.Add(team);
+        await context.SaveChangesAsync();
+
+        var controller = new AdminTeamsController(context, userManager);
+        var result = await controller.RejectTeam(team.TeamId);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Only pending teams can be rejected.", GetMessage(result));
+        Assert.Equal(TeamStatus.Approved, team.Status);
+        Assert.Null(team.StatusReason);
+        Assert.Null(team.EliminationReason);
+        Assert.Null(team.EliminatedAt);
+        Assert.Empty(context.AuditLogs);
     }
 
     [Fact]
@@ -156,6 +220,32 @@ public class AdminTeamsControllerTests
         Assert.IsType<OkObjectResult>(result);
         Assert.False(await userManager.IsInRoleAsync(leader, "TeamLeader"));
         Assert.NotEqual(beforeStamp, await userManager.GetSecurityStampAsync(leader));
+    }
+
+    [Theory]
+    [InlineData(TeamStatus.Pending)]
+    [InlineData(TeamStatus.Rejected)]
+    public async Task EliminateTeam_WhenTeamIsNotParticipating_ReturnsBadRequestAndKeepsStatus(TeamStatus status)
+    {
+        using var context = CreateContext();
+        var userManager = CreateUserManager(context);
+        var leader = CreateLeader();
+        var category = new Category { CategoryId = Guid.NewGuid(), CategoryName = "Web" };
+        var team = CreateTeam(leader.Id, status);
+        team.CategoryId = category.CategoryId;
+
+        await SeedTeamLeaderRoleAsync(context, userManager, leader);
+        context.AddRange(category, team);
+        await context.SaveChangesAsync();
+
+        var controller = new AdminTeamsController(context, userManager);
+        var result = await controller.EliminateTeam(team.TeamId, new EliminateTeamRequest { Reason = "Rule violation" });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Only approved or active teams can be eliminated.", GetMessage(result));
+        Assert.Equal(status, team.Status);
+        Assert.Null(team.EliminationReason);
+        Assert.Null(team.EliminatedAt);
     }
 
     [Fact]
@@ -189,7 +279,7 @@ public class AdminTeamsControllerTests
         var userManager = CreateUserManager(context);
         var leader = CreateLeader();
         var category = new Category { CategoryId = Guid.NewGuid(), CategoryName = "Web" };
-        var targetTeam = CreateTeam(leader.Id);
+        var targetTeam = CreateTeam(leader.Id, action == "reject" ? TeamStatus.Pending : TeamStatus.Approved);
         var stillApprovedTeam = CreateTeam(leader.Id);
         targetTeam.CategoryId = category.CategoryId;
         stillApprovedTeam.CategoryId = category.CategoryId;

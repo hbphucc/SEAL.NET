@@ -70,7 +70,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
         description={`Category: ${team!.category?.categoryName}`}
         icon={Trophy}
         actions={
-          isAdmin && team!.status !== "Eliminated" ? (
+          isAdmin && team!.status !== "Eliminated" && team!.status !== "Pending" && team!.status !== "Rejected" ? (
             <button
               onClick={() => setShowEliminate(true)}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
@@ -145,6 +145,16 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
               <span>{formatDate(team!.eliminatedAt)}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {team!.status === "Rejected" && team!.statusReason && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4 text-orange-600" />
+            <h3 className="font-semibold text-orange-800">Rejection Info</h3>
+          </div>
+          <p className="text-sm text-orange-700">{team!.statusReason}</p>
         </div>
       )}
 
