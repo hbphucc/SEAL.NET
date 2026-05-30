@@ -55,6 +55,12 @@ export interface AddTeamMemberRequest {
   studentCode: string;
 }
 
+export interface AddTeamMemberResponse {
+  message: string;
+  team: Team;
+  addedMember: TeamMember;
+}
+
 export interface UpdateTeamRequest {
   teamName: string;
   description?: string;

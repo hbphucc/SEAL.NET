@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { teamService } from "@/services/teamService";
-import { EliminateTeamRequest } from "@/types/team";
+import { AddTeamMemberRequest, EliminateTeamRequest } from "@/types/team";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/utils";
 
@@ -55,10 +55,10 @@ export function useCreateTeam() {
 export function useAddTeamMember() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ teamId, data }: { teamId: string; data: { studentCode: string } }) =>
-      teamService.addMember(teamId, data),
+    mutationFn: (data: AddTeamMemberRequest) => teamService.addMember(data),
     onSuccess: (data) => {
       toast.success(data.message);
+      qc.setQueryData(TEAM_KEYS.myTeam, data.team);
       qc.invalidateQueries({ queryKey: TEAM_KEYS.myTeam });
       qc.invalidateQueries({ queryKey: TEAM_KEYS.all });
     },

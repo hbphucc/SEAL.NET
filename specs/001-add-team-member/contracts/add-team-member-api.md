@@ -73,6 +73,7 @@ Preferred response shape returns the updated team so the frontend can refresh th
     ]
   },
   "addedMember": {
+    "userId": "server-internal-guid",
     "studentCode": "SE123456",
     "fullName": "New Member",
     "email": "member@example.com",

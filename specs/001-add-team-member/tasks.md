@@ -54,15 +54,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement `POST /api/teams/my-team/members` success path that resolves the current TeamLeader's led team server-side in `Backend/Controllers/TeamsController.cs`
-- [ ] T011 [US1] Return the updated team representation and added member data from the successful add-member response in `Backend/Controllers/TeamsController.cs`
-- [ ] T012 [US1] Add a successful add-member audit log entry with actor id, team id, StudentCode, and outcome details in `Backend/Controllers/TeamsController.cs`
-- [ ] T013 [US1] Change `teamService.addMember` to call `POST /teams/my-team/members` without a teamId argument in `Frontend/services/teamService.ts`
-- [ ] T014 [US1] Update `useAddTeamMember` to accept only `{ studentCode }`, invalidate `TEAM_KEYS.myTeam`, and optionally set returned team data in `Frontend/hooks/useTeams.ts`
-- [ ] T015 [P] [US1] Create a StudentCode-only direct add-member form component in `Frontend/components/team/TeamAddMemberPanel.tsx`
-- [ ] T016 [US1] Replace the My Team direct member-add UI from invite flow to `TeamAddMemberPanel` in `Frontend/app/(dashboard)/my-team/page.tsx`
-- [ ] T017 [US1] Ensure the My Team add-member form exposes no teamId, userId, or GUID input and only submits StudentCode in `Frontend/app/(dashboard)/my-team/page.tsx`
-- [ ] T018 [US1] Verify the Story 1 API and UI behavior against the smoke-test steps in `specs/001-add-team-member/quickstart.md`
+- [X] T010 [US1] Implement `POST /api/teams/my-team/members` success path that resolves the current TeamLeader's led team server-side in `Backend/Controllers/TeamsController.cs`
+- [X] T011 [US1] Return the updated team representation and added member data from the successful add-member response in `Backend/Controllers/TeamsController.cs`
+- [X] T012 [US1] Add a successful add-member audit log entry with actor id, team id, StudentCode, and outcome details in `Backend/Controllers/TeamsController.cs`
+- [X] T013 [US1] Change `teamService.addMember` to call `POST /teams/my-team/members` without a teamId argument in `Frontend/services/teamService.ts`
+- [X] T014 [US1] Update `useAddTeamMember` to accept only `{ studentCode }`, invalidate `TEAM_KEYS.myTeam`, and optionally set returned team data in `Frontend/hooks/useTeams.ts`
+- [X] T015 [P] [US1] Create a StudentCode-only direct add-member form component in `Frontend/components/team/TeamAddMemberPanel.tsx`
+- [X] T016 [US1] Replace the My Team direct member-add UI from invite flow to `TeamAddMemberPanel` in `Frontend/app/(dashboard)/my-team/page.tsx`
+- [X] T017 [US1] Ensure the My Team add-member form exposes no teamId, userId, or GUID input and only submits StudentCode in `Frontend/app/(dashboard)/my-team/page.tsx`
+- [X] T018 [US1] Verify the Story 1 API and UI behavior against the smoke-test steps in `specs/001-add-team-member/quickstart.md`
 
 **Checkpoint**: User Story 1 is functional and independently testable.
 
@@ -78,18 +78,18 @@
 
 > Write these tests first and confirm they fail before implementation.
 
-- [ ] T019 [P] [US2] Add backend tests for empty and unknown StudentCode returning clear errors with no membership mutation in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
-- [ ] T020 [P] [US2] Add backend tests for duplicate same-team member and leader self-add returning clear errors with no duplicate membership in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
-- [ ] T021 [P] [US2] Add backend tests for same-event team conflict and team-full rejection in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
-- [ ] T022 [P] [US2] Add backend tests for unapproved or ineligible candidate user rejection in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
-- [ ] T023 [P] [US2] Add backend audit tests for denied membership-integrity outcomes in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T019 [P] [US2] Add backend tests for empty and unknown StudentCode returning clear errors with no membership mutation in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T020 [P] [US2] Add backend tests for duplicate same-team member and leader self-add returning clear errors with no duplicate membership in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T021 [P] [US2] Add backend tests for same-event team conflict and team-full rejection in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T022 [P] [US2] Add backend tests for unapproved or ineligible candidate user rejection in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T023 [P] [US2] Add backend audit tests for denied membership-integrity outcomes in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Reuse or extract validation logic so the my-team add-member endpoint rejects empty, unknown, unapproved, self-add, duplicate, same-event conflict, full-team, and locked-team cases in `Backend/Controllers/TeamsController.cs`
-- [ ] T025 [US2] Ensure each invalid add-member outcome returns a distinct user-displayable `{ message }` response in `Backend/Controllers/TeamsController.cs`
-- [ ] T026 [US2] Add audit log records for denied duplicate, same-event conflict, team-full, unapproved, and missing-led-team attempts in `Backend/Controllers/TeamsController.cs`
-- [ ] T027 [US2] Preserve the existing member list and display backend error messages in the direct add-member form in `Frontend/components/team/TeamAddMemberPanel.tsx`
+- [X] T024 [US2] Reuse or extract validation logic so the my-team add-member endpoint rejects empty, unknown, unapproved, self-add, duplicate, same-event conflict, full-team, and locked-team cases in `Backend/Controllers/TeamsController.cs`
+- [X] T025 [US2] Ensure each invalid add-member outcome returns a distinct user-displayable `{ message }` response in `Backend/Controllers/TeamsController.cs`
+- [X] T026 [US2] Add audit log records for denied duplicate, same-event conflict, team-full, unapproved, and missing-led-team attempts in `Backend/Controllers/TeamsController.cs`
+- [X] T027 [US2] Preserve the existing member list and display backend error messages in the direct add-member form in `Frontend/components/team/TeamAddMemberPanel.tsx`
 
 **Checkpoint**: User Story 2 invalid cases are independently testable and do not mutate membership.
 
@@ -105,15 +105,15 @@
 
 > Write these tests first and confirm they fail before implementation.
 
-- [ ] T028 [P] [US3] Add backend test asserting the my-team add-member action is decorated for `TeamLeader` role authorization in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
-- [ ] T029 [P] [US3] Add backend test for a TeamLeader with no led team returning a clear denial/not-found response with no membership mutation in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
-- [ ] T030 [P] [US3] Add backend test proving the endpoint resolves the target team from current user identity and cannot add to another TeamLeader's team in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T028 [P] [US3] Add backend test asserting the my-team add-member action is decorated for `TeamLeader` role authorization in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T029 [P] [US3] Add backend test for a TeamLeader with no led team returning a clear denial/not-found response with no membership mutation in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T030 [P] [US3] Add backend test proving the endpoint resolves the target team from current user identity and cannot add to another TeamLeader's team in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Restrict the new my-team add-member endpoint to `[Authorize(Roles = "TeamLeader")]` in `Backend/Controllers/TeamsController.cs`
-- [ ] T032 [US3] Remove target team id from the frontend add-member hook/service call path while preserving existing non-input rendering needs in `Frontend/hooks/useTeams.ts` and `Frontend/services/teamService.ts`
-- [ ] T033 [US3] Render `TeamAddMemberPanel` only for the current leader and never pass a user-facing teamId/GUID add-member input in `Frontend/app/(dashboard)/my-team/page.tsx`
+- [X] T031 [US3] Restrict the new my-team add-member endpoint to `[Authorize(Roles = "TeamLeader")]` in `Backend/Controllers/TeamsController.cs`
+- [X] T032 [US3] Remove target team id from the frontend add-member hook/service call path while preserving existing non-input rendering needs in `Frontend/hooks/useTeams.ts` and `Frontend/services/teamService.ts`
+- [X] T033 [US3] Render `TeamAddMemberPanel` only for the current leader and never pass a user-facing teamId/GUID add-member input in `Frontend/app/(dashboard)/my-team/page.tsx`
 
 **Checkpoint**: User Story 3 authorization boundary is independently testable.
 
@@ -123,11 +123,11 @@
 
 **Purpose**: Final validation, cleanup, and documentation consistency.
 
-- [ ] T034 [P] Update contract examples if implementation response fields differ from the planned shape in `specs/001-add-team-member/contracts/add-team-member-api.md`
-- [ ] T035 [P] Update quickstart verification notes with any exact command or response adjustments in `specs/001-add-team-member/quickstart.md`
-- [ ] T036 Run backend test suite and record any failures for this feature in `Backend/Tests/SEAL.NET.Tests/SEAL.NET.Tests.csproj`
-- [ ] T037 Run frontend lint and build checks for the My Team changes in `Frontend/package.json`
-- [ ] T038 Review the final implementation against the no UserId/GUID input rule in `Frontend/app/(dashboard)/my-team/page.tsx` and `Frontend/components/team/TeamAddMemberPanel.tsx`
+- [X] T034 [P] Update contract examples if implementation response fields differ from the planned shape in `specs/001-add-team-member/contracts/add-team-member-api.md`
+- [X] T035 [P] Update quickstart verification notes with any exact command or response adjustments in `specs/001-add-team-member/quickstart.md`
+- [X] T036 Run backend test suite and record any failures for this feature in `Backend/Tests/SEAL.NET.Tests/SEAL.NET.Tests.csproj`
+- [X] T037 Run frontend lint and build checks for the My Team changes in `Frontend/package.json`
+- [X] T038 Review the final implementation against the no UserId/GUID input rule in `Frontend/app/(dashboard)/my-team/page.tsx` and `Frontend/components/team/TeamAddMemberPanel.tsx`
 
 ---
 

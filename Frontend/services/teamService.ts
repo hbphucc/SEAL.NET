@@ -5,6 +5,7 @@ import {
   CreateTeamRequest,
   EliminateTeamRequest,
   AddTeamMemberRequest,
+  AddTeamMemberResponse,
   InviteTeamMemberRequest,
   TeamInvite,
   TransferLeadershipRequest,
@@ -57,8 +58,8 @@ export const teamService = {
     }
   },
 
-  async addMember(teamId: string, data: AddTeamMemberRequest): Promise<{ message: string }> {
-    const res = await api.post<{ message: string }>(`/teams/${teamId}/members`, data);
+  async addMember(data: AddTeamMemberRequest): Promise<AddTeamMemberResponse> {
+    const res = await api.post<AddTeamMemberResponse>("/teams/my-team/members", data);
     return res.data;
   },
 

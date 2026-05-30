@@ -53,8 +53,8 @@ Expected:
 From `Frontend/`:
 
 ```powershell
-npm run lint
-npm run build
+npm.cmd run lint
+npm.cmd run build
 ```
 
 Manual UX check:
