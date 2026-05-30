@@ -62,6 +62,9 @@ namespace SEAL.NET.Controllers
                 TeamId = team.TeamId,
                 TeamName = team.TeamName,
                 Status = team.Status.ToString(),
+                StatusReason = team.StatusReason,
+                EliminationReason = team.EliminationReason,
+                EliminatedAt = team.EliminatedAt,
                 LeaderId = team.LeaderId,
                 Category = new TeamCategoryResponseDto
                 {
@@ -396,7 +399,10 @@ namespace SEAL.NET.Controllers
             }
 
             if (team.Status != TeamStatus.Pending)
+            {
+                await AddTeamMemberDeniedAuditAsync(team.TeamId, studentCode, "TeamLocked");
                 return BadRequest(new { message = "Use the invite flow to add members after initial team creation." });
+            }
 
             if (team.Members.Count >= 5)
             {
@@ -407,7 +413,10 @@ namespace SEAL.NET.Controllers
             var user = await FindUserByStudentCodeAsync(studentCode);
 
             if (user == null)
+            {
+                await AddTeamMemberDeniedAuditAsync(team.TeamId, studentCode, "StudentCodeNotFound");
                 return NotFound(new { message = $"User with Student Code '{studentCode}' was not found." });
+            }
 
             if (!user.IsApproved)
             {
@@ -416,7 +425,10 @@ namespace SEAL.NET.Controllers
             }
 
             if (user.Id == currentUserId)
+            {
+                await AddTeamMemberDeniedAuditAsync(team.TeamId, studentCode, "LeaderSelfAdd");
                 return BadRequest(new { message = "Leader is already part of the team." });
+            }
 
             var alreadyInTeam = team.Members.Any(m => m.UserId == user.Id);
 

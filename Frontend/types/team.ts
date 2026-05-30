@@ -5,7 +5,8 @@ export type TeamStatus =
   | "Eliminated"
   | "Withdrawn"
   | "Champion"
-  | "Archived";
+  | "Archived"
+  | "Rejected";
 
 export interface TeamMember {
   userId: string;

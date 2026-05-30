@@ -112,10 +112,10 @@ export default function TeamsPage() {
     },
     {
       key: "eliminationReason",
-      label: "Elimination Reason",
+      label: "Status Reason",
       render: (_: unknown, row: Team) => (
         <span className="text-xs text-slate-500 max-w-[120px] truncate block">
-          {row.eliminationReason ?? "-"}
+          {(row.status === "Eliminated" ? row.eliminationReason : row.statusReason) ?? "-"}
         </span>
       ),
     },
@@ -166,7 +166,7 @@ export default function TeamsPage() {
                 <XCircle className="w-3.5 h-3.5" /> Reject
               </button>
             )}
-            {row.status !== "Eliminated" && row.status !== "Pending" && (
+            {row.status !== "Eliminated" && row.status !== "Pending" && row.status !== "Rejected" && (
               <button
                 onClick={() => { setEliminateTarget(row); setEliminationReason(""); }}
                 className="flex items-center gap-1 px-2 py-1.5 text-xs rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium"

@@ -6,7 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-CC2927?logo=microsoftsqlserver&logoColor=white)
 
-# SEAL.NET — Competition Management Platform
+# SEAL.NET - Competition Management Platform
 
 A full-stack competition management platform built with **ASP.NET Core 8 Web API** and **Next.js 16**, designed to manage the complete lifecycle of hackathons, academic competitions, and judging workflows.
 
@@ -38,15 +38,20 @@ Built as a portfolio-grade project to showcase backend architecture, frontend en
 
 ```text
 Frontend (Next.js 16)
-        ↓
+        |
+        v
 REST API (ASP.NET Core 8)
-        ↓
+        |
+        v
 Business Services
-        ↓
+        |
+        v
 Repository Layer
-        ↓
+        |
+        v
 Entity Framework Core
-        ↓
+        |
+        v
 SQL Server
 ```
 
@@ -216,27 +221,27 @@ Operational visibility includes:
 
 ```bash
 SEAL.NET/
-│
-├── backend/
-│   ├── Controllers/
-│   ├── DTOs/
-│   ├── Models/
-│   ├── Repositories/
-│   ├── Services/
-│   ├── Middleware/
-│   └── Data/
-│
-├── frontend/
-│   ├── src/app/
-│   ├── src/components/
-│   ├── src/services/
-│   ├── src/hooks/
-│   └── src/types/
-│
-├── tests/
-│
-├── docker-compose.yml
-└── README.md
+|
+|-- Backend/
+|   |-- Controllers/
+|   |-- DTOs/
+|   |-- Models/
+|   |-- Repositories/
+|   |-- Services/
+|   |-- Middleware/
+|   |-- Data/
+|   `-- Tests/
+|
+|-- Frontend/
+|   |-- app/
+|   |-- components/
+|   |-- services/
+|   |-- hooks/
+|   `-- types/
+|
+|-- specs/
+|-- README.md
+`-- LICENSE
 ```
 
 ---
@@ -339,8 +344,8 @@ GET /api/auth/me
 ```http
 POST /api/teams
 GET /api/teams/my-team
-POST /api/teams/add-member
-DELETE /api/teams/remove-member
+POST /api/teams/my-team/members
+DELETE /api/teams/{teamId}/members/{studentCode}
 ```
 
 ### Admin
@@ -382,8 +387,8 @@ Implemented security measures:
 Backend test suite:
 
 ```bash
-cd tests
-dotnet test
+cd Backend
+dotnet test Tests/SEAL.NET.Tests/SEAL.NET.Tests.csproj
 ```
 
 Testing includes:

@@ -156,6 +156,14 @@ public class TeamsControllerAddMemberTests
         return value?.GetType().GetProperty("message")?.GetValue(value)?.ToString();
     }
 
+    private static AuditLog AssertDeniedAudit(ApplicationDbContext context, string expectedOutcome, string expectedStudentCode)
+    {
+        var audit = Assert.Single(context.AuditLogs.Where(log => log.Action == "TeamMemberAddDenied"));
+        Assert.Contains($"Outcome={expectedOutcome}", audit.Details);
+        Assert.Contains($"StudentCode={expectedStudentCode}", audit.Details);
+        return audit;
+    }
+
     [Fact]
     public void AddMemberToMyTeam_RequiresTeamLeaderRole()
     {
@@ -411,6 +419,61 @@ public class TeamsControllerAddMemberTests
             Assert.IsType<BadRequestObjectResult>(result);
             Assert.Equal("This user has not been approved yet.", GetMessage(result));
             Assert.False(context.TeamMembers.Any(m => m.TeamId == team.TeamId && m.UserId == candidate.Id));
+        }
+    }
+
+    [Fact]
+    public async Task AddMemberToMyTeam_WhenTeamIsLocked_CreatesDeniedAuditLog()
+    {
+        var (controller, context, _, candidate, team) = await CreateTeamScenarioAsync(teamStatus: TeamStatus.Approved);
+        await using (context)
+        {
+            var result = await controller.AddMemberToMyTeam(new AddTeamMemberRequest
+            {
+                StudentCode = candidate.StudentCode!
+            });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("Use the invite flow to add members after initial team creation.", GetMessage(result));
+            var audit = AssertDeniedAudit(context, "TeamLocked", candidate.StudentCode!);
+            Assert.Equal(team.TeamId, audit.EntityId);
+            Assert.False(context.TeamMembers.Any(m => m.TeamId == team.TeamId && m.UserId == candidate.Id));
+        }
+    }
+
+    [Fact]
+    public async Task AddMemberToMyTeam_WhenStudentCodeIsUnknown_CreatesDeniedAuditLog()
+    {
+        var (controller, context, _, _, team) = await CreateTeamScenarioAsync();
+        await using (context)
+        {
+            var result = await controller.AddMemberToMyTeam(new AddTeamMemberRequest
+            {
+                StudentCode = "UNKNOWN"
+            });
+
+            Assert.IsType<NotFoundObjectResult>(result);
+            var audit = AssertDeniedAudit(context, "StudentCodeNotFound", "UNKNOWN");
+            Assert.Equal(team.TeamId, audit.EntityId);
+            Assert.Single(context.TeamMembers.Where(m => m.TeamId == team.TeamId));
+        }
+    }
+
+    [Fact]
+    public async Task AddMemberToMyTeam_WhenLeaderAddsSelf_CreatesDeniedAuditLog()
+    {
+        var (controller, context, leader, _, team) = await CreateTeamScenarioAsync();
+        await using (context)
+        {
+            var result = await controller.AddMemberToMyTeam(new AddTeamMemberRequest
+            {
+                StudentCode = leader.StudentCode!
+            });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+            var audit = AssertDeniedAudit(context, "LeaderSelfAdd", leader.StudentCode!);
+            Assert.Equal(team.TeamId, audit.EntityId);
+            Assert.Equal(1, context.TeamMembers.Count(m => m.TeamId == team.TeamId && m.UserId == leader.Id));
         }
     }
 

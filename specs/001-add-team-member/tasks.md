@@ -18,9 +18,9 @@
 
 **Purpose**: Confirm current implementation surface and prepare the task execution area.
 
-- [ ] T001 Review the existing direct add-member endpoint and invite endpoint in `Backend/Controllers/TeamsController.cs`
-- [ ] T002 [P] Review existing frontend team service, hook, and My Team page usage in `Frontend/services/teamService.ts`, `Frontend/hooks/useTeams.ts`, and `Frontend/app/(dashboard)/my-team/page.tsx`
-- [ ] T003 [P] Review existing controller test setup patterns in `Backend/Tests/SEAL.NET.Tests/Controllers/AdminTeamsControllerTests.cs`
+- [X] T001 Review the existing direct add-member endpoint and invite endpoint in `Backend/Controllers/TeamsController.cs`
+- [X] T002 [P] Review existing frontend team service, hook, and My Team page usage in `Frontend/services/teamService.ts`, `Frontend/hooks/useTeams.ts`, and `Frontend/app/(dashboard)/my-team/page.tsx`
+- [X] T003 [P] Review existing controller test setup patterns in `Backend/Tests/SEAL.NET.Tests/Controllers/AdminTeamsControllerTests.cs`
 
 ---
 
@@ -30,10 +30,10 @@
 
 **CRITICAL**: No user story implementation should begin until this phase is complete.
 
-- [ ] T004 Create `TeamsControllerAddMemberTests` test fixture helpers for EF InMemory context, Identity `UserManager`, authenticated controller user claims, categories, teams, and users in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
-- [ ] T005 Add or confirm a reusable Team response DTO/shape for updated team member responses in `Backend/DTOs/Team/AddTeamMenberRequest.cs`
-- [ ] T006 Add a private response-mapping helper for My Team member output in `Backend/Controllers/TeamsController.cs`
-- [ ] T007 Update frontend add-member response types for the new my-team contract in `Frontend/types/team.ts`
+- [X] T004 Create `TeamsControllerAddMemberTests` test fixture helpers for EF InMemory context, Identity `UserManager`, authenticated controller user claims, categories, teams, and users in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T005 Add or confirm a reusable Team response DTO/shape for updated team member responses in `Backend/DTOs/Team/AddTeamMenberRequest.cs`
+- [X] T006 Add a private response-mapping helper for My Team member output in `Backend/Controllers/TeamsController.cs`
+- [X] T007 Update frontend add-member response types for the new my-team contract in `Frontend/types/team.ts`
 
 **Checkpoint**: Shared test and contract scaffolding is ready.
 
@@ -49,8 +49,8 @@
 
 > Write these tests first and confirm they fail before implementation.
 
-- [ ] T008 [P] [US1] Add backend success test for `POST /api/teams/my-team/members` adding an eligible StudentCode and persisting one `TeamMember` in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
-- [ ] T009 [P] [US1] Add backend success response test asserting the response includes the added member or updated team member list in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T008 [P] [US1] Add backend success test for `POST /api/teams/my-team/members` adding an eligible StudentCode and persisting one `TeamMember` in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
+- [X] T009 [P] [US1] Add backend success response test asserting the response includes the added member or updated team member list in `Backend/Tests/SEAL.NET.Tests/Controllers/TeamsControllerAddMemberTests.cs`
 
 ### Implementation for User Story 1
 
