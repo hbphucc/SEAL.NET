@@ -8,6 +8,9 @@ on:
 jobs:
   backend:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: Backend 
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
