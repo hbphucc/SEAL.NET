@@ -2,12 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { Plus, Send, Trash2, Trophy, Users, Edit, LogOut, Award } from "lucide-react";
+import { Plus, Send, Trash2, Trophy, Users, Edit, LogOut } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import PendingInvitesPanel from "@/components/team/PendingInvitesPanel";
-import TeamInvitePanel from "@/components/team/TeamInvitePanel";
+import TeamAddMemberPanel from "@/components/team/TeamAddMemberPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useCreateTeam,
@@ -68,12 +68,11 @@ export default function MyTeamPage() {
 
   const isLeader = !!user && myTeam?.leaderId === user.id;
   const canEditMembers = isLeader && myTeam?.status === "Pending";
-  const canInviteMembers =
+  const canAddMembers =
     isLeader &&
     !!myTeam &&
     myTeam.members.length < 5 &&
-    myTeam.status !== "Eliminated" &&
-    myTeam.status !== "Archived";
+    myTeam.status === "Pending";
   const canSubmit = isLeader && myTeam?.status === "Approved" && !!myTeam.currentRound;
 
   const isEliminatedOrArchived = myTeam
@@ -380,7 +379,7 @@ export default function MyTeamPage() {
           })}
         </div>
         {isLeader && (
-          <TeamInvitePanel teamId={myTeam.teamId} disabled={!canInviteMembers} />
+          <TeamAddMemberPanel disabled={!canAddMembers} />
         )}
       </div>
 

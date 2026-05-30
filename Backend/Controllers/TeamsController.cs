@@ -42,6 +42,52 @@ namespace SEAL.NET.Controllers
                     u.StudentCode.ToUpper() == normalizedStudentCode);
         }
 
+        private static TeamMemberResponseDto MapTeamMemberResponse(TeamMember member)
+        {
+            return new TeamMemberResponseDto
+            {
+                UserId = member.UserId,
+                StudentCode = member.User!.StudentCode,
+                FullName = member.User.FullName,
+                Email = member.User.Email ?? string.Empty,
+                Role = member.Role.ToString(),
+                IsLeader = member.IsLeader
+            };
+        }
+
+        private static TeamResponseDto MapTeamResponse(Team team)
+        {
+            return new TeamResponseDto
+            {
+                TeamId = team.TeamId,
+                TeamName = team.TeamName,
+                Status = team.Status.ToString(),
+                LeaderId = team.LeaderId,
+                Category = new TeamCategoryResponseDto
+                {
+                    CategoryId = team.Category!.CategoryId,
+                    CategoryName = team.Category.CategoryName
+                },
+                CurrentRound = team.CurrentRound == null ? null : new TeamRoundResponseDto
+                {
+                    RoundId = team.CurrentRound.RoundId,
+                    RoundName = team.CurrentRound.RoundName
+                },
+                Members = team.Members.Select(MapTeamMemberResponse).ToList()
+            };
+        }
+
+        private async Task AddTeamMemberDeniedAuditAsync(Guid teamId, string studentCode, string outcome)
+        {
+            await AddAuditAsync(
+                "TeamMemberAddDenied",
+                "Team",
+                teamId,
+                $"StudentCode={studentCode};Outcome={outcome}"
+            );
+            await _context.SaveChangesAsync();
+        }
+
         [HttpPost]
         [Authorize(Roles = "Member,TeamLeader")]
         public async Task<IActionResult> CreateTeam([FromBody] CreateTeamRequest request)
@@ -210,32 +256,7 @@ namespace SEAL.NET.Controllers
             if (team == null)
                 return Ok(null);
 
-            return Ok(new
-            {
-                team.TeamId,
-                team.TeamName,
-                status = team.Status.ToString(),
-                leaderId = team.LeaderId,
-                category = new
-                {
-                    team.Category!.CategoryId,
-                    team.Category.CategoryName
-                },
-                currentRound = team.CurrentRound == null ? null : new
-                {
-                    team.CurrentRound.RoundId,
-                    team.CurrentRound.RoundName
-                },
-                members = team.Members.Select(m => new
-                {
-                    m.UserId,
-                    m.User!.StudentCode,
-                    m.User.FullName,
-                    m.User.Email,
-                    role = m.Role.ToString(),
-                    m.IsLeader
-                })
-            });
+            return Ok(MapTeamResponse(team));
         }
 
         [HttpPut("{teamId}")]
@@ -349,6 +370,108 @@ namespace SEAL.NET.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Member added successfully." });
+        }
+
+        [HttpPost("my-team/members")]
+        [Authorize(Roles = "TeamLeader")]
+        public async Task<IActionResult> AddMemberToMyTeam([FromBody] AddTeamMemberRequest request)
+        {
+            var currentUserId = GetCurrentUserId();
+            var studentCode = request.StudentCode?.Trim();
+
+            if (string.IsNullOrWhiteSpace(studentCode))
+                return BadRequest(new { message = "Student code is required." });
+
+            var team = await _context.Teams
+                .Include(t => t.Members)
+                    .ThenInclude(m => m.User)
+                .Include(t => t.Category)
+                .Include(t => t.CurrentRound)
+                .FirstOrDefaultAsync(t => t.LeaderId == currentUserId);
+
+            if (team == null)
+            {
+                await AddTeamMemberDeniedAuditAsync(Guid.Empty, studentCode, "NoLedTeam");
+                return NotFound(new { message = "Team not found." });
+            }
+
+            if (team.Status != TeamStatus.Pending)
+                return BadRequest(new { message = "Use the invite flow to add members after initial team creation." });
+
+            if (team.Members.Count >= 5)
+            {
+                await AddTeamMemberDeniedAuditAsync(team.TeamId, studentCode, "TeamFull");
+                return BadRequest(new { message = "A team can have maximum 5 members." });
+            }
+
+            var user = await FindUserByStudentCodeAsync(studentCode);
+
+            if (user == null)
+                return NotFound(new { message = $"User with Student Code '{studentCode}' was not found." });
+
+            if (!user.IsApproved)
+            {
+                await AddTeamMemberDeniedAuditAsync(team.TeamId, studentCode, "UnapprovedUser");
+                return BadRequest(new { message = "This user has not been approved yet." });
+            }
+
+            if (user.Id == currentUserId)
+                return BadRequest(new { message = "Leader is already part of the team." });
+
+            var alreadyInTeam = team.Members.Any(m => m.UserId == user.Id);
+
+            if (alreadyInTeam)
+            {
+                await AddTeamMemberDeniedAuditAsync(team.TeamId, studentCode, "DuplicateMember");
+                return BadRequest(new { message = "User is already in this team." });
+            }
+
+            var eventId = team.Category!.EventId;
+
+            var categoryIdsInSameEvent = await _context.Categories
+                .Where(c => c.EventId == eventId)
+                .Select(c => c.CategoryId)
+                .ToListAsync();
+
+            var alreadyJoinedEvent = await _context.TeamMembers
+                .Include(tm => tm.Team)
+                .AnyAsync(tm =>
+                    tm.UserId == user.Id &&
+                    categoryIdsInSameEvent.Contains(tm.Team!.CategoryId));
+
+            if (alreadyJoinedEvent)
+            {
+                await AddTeamMemberDeniedAuditAsync(team.TeamId, studentCode, "SameEventTeamConflict");
+                return BadRequest(new { message = "User already joined another team in this event." });
+            }
+
+            var member = new TeamMember
+            {
+                TeamId = team.TeamId,
+                UserId = user.Id,
+                User = user,
+                IsLeader = false,
+                Role = TeamMemberRole.Member
+            };
+
+            _context.TeamMembers.Add(member);
+            team.Members.Add(member);
+
+            await AddAuditAsync(
+                "TeamMemberAdded",
+                "Team",
+                team.TeamId,
+                $"StudentCode={studentCode};Outcome=Success"
+            );
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new AddTeamMemberResponse
+            {
+                Message = "Member added successfully.",
+                Team = MapTeamResponse(team),
+                AddedMember = MapTeamMemberResponse(member)
+            });
         }
 
         [HttpPost("{teamId}/invites")]
