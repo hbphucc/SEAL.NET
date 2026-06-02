@@ -6,5 +6,4 @@
 **/.git
 **/*.user
 **/*.tmp
-frontend/.env*
 appsettings.Development.json
