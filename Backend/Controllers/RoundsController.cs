@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SEAL.NET.Data;
+using SEAL.NET.Common;
 using SEAL.NET.DTOs.Round;
-using SEAL.NET.Models.Entities;
+using SEAL.NET.Services.Interfaces;
 
 namespace SEAL.NET.Controllers
 {
@@ -12,199 +11,38 @@ namespace SEAL.NET.Controllers
     [Authorize(Roles = "Admin")]
     public class RoundsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IRoundService _roundService;
 
-        public RoundsController(ApplicationDbContext context)
+        public RoundsController(IRoundService roundService)
         {
-            _context = context;
-        }
-
-        private static DateTime RequireInputUtc(DateTime value)
-        {
-            if (value.Kind == DateTimeKind.Unspecified)
-            {
-                throw new ArgumentException("DateTime must specify a timezone (e.g., append 'Z' for UTC).");
-            }
-
-            return value.ToUniversalTime();
-        }
-
-        private static DateTime PersistedUtc(DateTime value)
-        {
-            return value.Kind == DateTimeKind.Unspecified
-                ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
-                : value.ToUniversalTime();
+            _roundService = roundService;
         }
 
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetRounds(Guid eventId)
-        {
-            var eventExists = await _context.Events.AnyAsync(e => e.EventId == eventId);
-            if (!eventExists)
-                return NotFound(new { message = "Event not found." });
-
-            var rounds = await _context.Rounds
-                .Where(r => r.EventId == eventId)
-                .OrderBy(r => r.RoundOrder)
-                .Select(r => new
-                {
-                    r.RoundId,
-                    r.RoundName,
-                    r.SubmissionDeadline,
-                    r.RoundOrder,
-                    r.MaxTeamsAdvancing,
-                    r.EventId
-                })
-                .ToListAsync();
-
-            return Ok(rounds);
-        }
+            => (await _roundService.GetRoundsAsync(eventId)).ToActionResult(this);
 
         [HttpGet("{roundId}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetRoundById(Guid eventId, Guid roundId)
         {
-            var round = await _context.Rounds
-                .Where(r => r.EventId == eventId && r.RoundId == roundId)
-                .Select(r => new
-                {
-                    r.RoundId,
-                    r.RoundName,
-                    r.SubmissionDeadline,
-                    r.RoundOrder,
-                    r.MaxTeamsAdvancing,
-                    r.EventId
-                })
-                .FirstOrDefaultAsync();
-
+            var round = await _roundService.GetRoundByIdAsync(eventId, roundId);
             if (round == null)
                 return NotFound(new { message = "Round not found." });
-
             return Ok(round);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateRound(Guid eventId, [FromBody] CreateRoundRequest request)
-        {
-            var eventItem = await _context.Events.FindAsync(eventId);
-
-            if (eventItem == null)
-                return NotFound(new { message = "Event not found." });
-
-            DateTime submissionDeadline;
-            try
-            {
-                submissionDeadline = RequireInputUtc(request.SubmissionDeadline);
-            }
-            catch (ArgumentException)
-            {
-                return BadRequest(new { message = "Datetime must include UTC or timezone offset." });
-            }
-
-            var eventStartDate = PersistedUtc(eventItem.StartDate);
-            var eventEndDate = PersistedUtc(eventItem.EndDate);
-
-            if (submissionDeadline < eventStartDate || submissionDeadline > eventEndDate)
-                return BadRequest(new { message = "SubmissionDeadline must be within event date range." });
-
-            var duplicateOrder = await _context.Rounds.AnyAsync(r =>
-                r.EventId == eventId &&
-                r.RoundOrder == request.RoundOrder);
-
-            if (duplicateOrder)
-                return BadRequest(new { message = "RoundOrder already exists in this event." });
-
-            var round = new Round
-            {
-                EventId = eventId,
-                RoundName = request.RoundName,
-                SubmissionDeadline = submissionDeadline,
-                RoundOrder = request.RoundOrder,
-                MaxTeamsAdvancing = request.MaxTeamsAdvancing
-            };
-
-            _context.Rounds.Add(round);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetRoundById), new
-            {
-                eventId,
-                roundId = round.RoundId
-            }, new
-            {
-                message = "Round created successfully.",
-                round.RoundId
-            });
-        }
+            => (await _roundService.CreateRoundAsync(eventId, request)).ToActionResult(this);
 
         [HttpPut("{roundId}")]
         public async Task<IActionResult> UpdateRound(Guid eventId, Guid roundId, [FromBody] UpdateRoundRequest request)
-        {
-            var round = await _context.Rounds
-                .FirstOrDefaultAsync(r => r.EventId == eventId && r.RoundId == roundId);
-
-            if (round == null)
-                return NotFound(new { message = "Round not found." });
-
-            var eventItem = await _context.Events.FindAsync(eventId);
-
-            if (eventItem == null)
-                return NotFound(new { message = "Event not found." });
-
-            DateTime submissionDeadline;
-            try
-            {
-                submissionDeadline = RequireInputUtc(request.SubmissionDeadline);
-            }
-            catch (ArgumentException)
-            {
-                return BadRequest(new { message = "Datetime must include UTC or timezone offset." });
-            }
-
-            var eventStartDate = PersistedUtc(eventItem.StartDate);
-            var eventEndDate = PersistedUtc(eventItem.EndDate);
-
-            if (submissionDeadline < eventStartDate || submissionDeadline > eventEndDate)
-                return BadRequest(new { message = "SubmissionDeadline must be within event date range." });
-
-            var duplicateOrder = await _context.Rounds.AnyAsync(r =>
-                r.EventId == eventId &&
-                r.RoundId != roundId &&
-                r.RoundOrder == request.RoundOrder);
-
-            if (duplicateOrder)
-                return BadRequest(new { message = "RoundOrder already exists in this event." });
-
-            round.RoundName = request.RoundName;
-            round.SubmissionDeadline = submissionDeadline;
-            round.RoundOrder = request.RoundOrder;
-            round.MaxTeamsAdvancing = request.MaxTeamsAdvancing;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Round updated successfully." });
-        }
+            => (await _roundService.UpdateRoundAsync(eventId, roundId, request)).ToActionResult(this);
 
         [HttpDelete("{roundId}")]
         public async Task<IActionResult> DeleteRound(Guid eventId, Guid roundId)
-        {
-            var round = await _context.Rounds
-                .Include(r => r.CriteriaList)
-                .Include(r => r.Submissions)
-                .Include(r => r.JudgeAssignments)
-                .FirstOrDefaultAsync(r => r.EventId == eventId && r.RoundId == roundId);
-
-            if (round == null)
-                return NotFound(new { message = "Round not found." });
-
-            if (round.CriteriaList.Any() || round.Submissions.Any() || round.JudgeAssignments.Any())
-                return BadRequest(new { message = "Cannot delete round because it already has criteria, submissions, or judge assignments." });
-
-            _context.Rounds.Remove(round);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Round deleted successfully." });
-        }
+            => (await _roundService.DeleteRoundAsync(eventId, roundId)).ToActionResult(this);
     }
 }

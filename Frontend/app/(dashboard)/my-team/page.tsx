@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { Plus, Send, Trash2, Trophy, Users, Edit, LogOut, Award } from "lucide-react";
+import { Plus, Send, Trash2, Trophy, Users, Edit, LogOut } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";

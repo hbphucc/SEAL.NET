@@ -60,6 +60,20 @@ builder.Services.AddScoped<IEventRepository, EventRepository>();
 
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IRankingService, RankingService>();
+builder.Services.AddScoped<ITeamService, TeamService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ICriteriaService, CriteriaService>();
+builder.Services.AddScoped<IJudgeAssignmentService, JudgeAssignmentService>();
+builder.Services.AddScoped<IRoundService, RoundService>();
+builder.Services.AddScoped<IAdminRoundService, AdminRoundService>();
+builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+builder.Services.AddScoped<IScoreService, ScoreService>();
+builder.Services.AddScoped<IMentorService, MentorService>();
+builder.Services.AddScoped<IAdminTeamService, AdminTeamService>();
+builder.Services.AddScoped<IAdminUserService, AdminUserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 
 builder.Services.AddAuthentication(options =>

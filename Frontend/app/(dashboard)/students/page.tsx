@@ -20,7 +20,12 @@ export default function StudentsPage() {
   const students = users.filter((u) => {
     const hasInfo = u.studentCode || u.studentType !== undefined;
     if (!hasInfo) return false;
-    if (typeFilter !== "all" && String(u.studentType) !== typeFilter) return false;
+    if (typeFilter !== "all") {
+      // Accept both the string ("FPT"/"External") and numeric (0/1) forms.
+      const raw = String(u.studentType);
+      const normalized = raw === "FPT" ? "0" : raw === "External" ? "1" : raw;
+      if (normalized !== typeFilter) return false;
+    }
     return true;
   });
 

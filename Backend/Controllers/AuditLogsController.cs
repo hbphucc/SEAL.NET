@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SEAL.NET.Data;
+using SEAL.NET.Services.Interfaces;
 
 namespace SEAL.NET.Controllers
 {
@@ -10,38 +9,15 @@ namespace SEAL.NET.Controllers
     [Authorize(Roles = "Admin")]
     public class AuditLogsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IAuditLogService _auditLogService;
 
-        public AuditLogsController(ApplicationDbContext context)
+        public AuditLogsController(IAuditLogService auditLogService)
         {
-            _context = context;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetLogs()
-        {
-            var logs = await _context.AuditLogs
-                .Include(log => log.ActorUser)
-                .OrderByDescending(log => log.CreatedAt)
-                .Take(200)
-                .Select(log => new
-                {
-                    log.AuditLogId,
-                    log.Action,
-                    log.EntityType,
-                    log.EntityId,
-                    log.Details,
-                    log.CreatedAt,
-                    actor = log.ActorUser == null ? null : new
-                    {
-                        log.ActorUser.Id,
-                        log.ActorUser.FullName,
-                        log.ActorUser.Email
-                    }
-                })
-                .ToListAsync();
-
-            return Ok(logs);
-        }
+            => Ok(await _auditLogService.GetRecentAsync());
     }
 }

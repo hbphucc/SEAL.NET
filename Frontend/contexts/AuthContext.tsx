@@ -10,6 +10,7 @@ import React, {
 import { usePathname } from "next/navigation";
 import { AuthUser, LoginRequest, RegisterRequest } from "@/types/auth";
 import { authService } from "@/services/authService";
+import { isPublicRoute } from "@/lib/constants";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -26,18 +27,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPublicAuthRoute =
-    pathname === "/" ||
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/unauthorized" ||
-    pathname === "/leaderboard" ||
-    pathname === "/events" ||
-    pathname.startsWith("/login/") ||
-    pathname.startsWith("/register/") ||
-    pathname.startsWith("/unauthorized/") ||
-    pathname.startsWith("/leaderboard/") ||
-    pathname.startsWith("/events/");
+  const isPublicAuthRoute = isPublicRoute(pathname);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(!isPublicAuthRoute);
 
@@ -49,6 +39,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const profile = await authService.getProfile();
       setUser(profile);
+    } catch {
+      // Transient failure (network / 5xx): keep whatever session we already had
+      // rather than forcing a logout. A real 401 returns null above and clears it.
     } finally {
       setIsLoading(false);
     }

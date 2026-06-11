@@ -1,33 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decodeJwt } from "jose";
-
-const PUBLIC_ROUTES = ["/", "/login", "/register", "/unauthorized", "/leaderboard", "/events"];
-
-const ROLE_GUARDS = [
-  { path: "/admin", roles: ["Admin"] },
-  { path: "/teams", roles: ["Admin"] },
-  { path: "/members", roles: ["Admin"] },
-  { path: "/team-leaders", roles: ["Admin"] },
-  { path: "/students", roles: ["Admin"] },
-  { path: "/eliminations", roles: ["Admin"] },
-  { path: "/elimination-reasons", roles: ["Admin"] },
-  { path: "/judge", roles: ["Judge"] },
-  { path: "/submit", roles: ["Member", "TeamLeader"] },
-  { path: "/my-team", roles: ["Member", "TeamLeader"] },
-];
-
-function isPublicRoute(pathname: string) {
-  return PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
-}
-
-function getRequiredRoles(pathname: string) {
-  const guard = ROLE_GUARDS.find(
-    (item) => pathname === item.path || pathname.startsWith(`${item.path}/`)
-  );
-  return guard?.roles ?? null;
-}
+import { getRequiredRoles, isPublicRoute } from "@/lib/constants";
 
 function getTokenRoles(token: string): string[] {
   try {

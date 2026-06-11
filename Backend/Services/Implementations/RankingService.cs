@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using SEAL.NET.Common;
 using SEAL.NET.Data;
+using SEAL.NET.DTOs.Ranking;
 using SEAL.NET.Models.Entities;
 using SEAL.NET.Models.Enums;
 using SEAL.NET.Services.Interfaces;
@@ -30,6 +32,109 @@ namespace SEAL.NET.Services.Implementations
                 .Sum(criteriaScores =>
                     criteriaScores.Average(score => score.ScoreValue / score.Criteria!.MaxScore) *
                     criteriaScores.First().Criteria!.Weight);
+        }
+
+        public async Task<ServiceResult> GetRoundRankingAsync(Guid roundId, bool requirePublished)
+        {
+            var gate = await EnsureRoundAccessibleAsync(roundId, requirePublished);
+            if (gate != null)
+                return gate;
+
+            var submissions = await _context.Submissions
+                .Include(s => s.Team)
+                    .ThenInclude(t => t.Category)
+                .Include(s => s.Scores)
+                    .ThenInclude(sc => sc.Criteria)
+                .Where(s => s.RoundId == roundId && !s.IsWithdrawn && s.Team!.Status != TeamStatus.Eliminated)
+                .ToListAsync();
+
+            var ranking = submissions
+                .Select(s => new
+                {
+                    s.SubmissionId,
+                    TeamId = s.Team!.TeamId,
+                    s.Team.TeamName,
+                    CategoryName = s.Team.Category!.CategoryName,
+                    TotalScore = CalculateWeightedScore(s.Scores),
+                    s.SubmittedAt
+                })
+                .OrderByDescending(x => x.TotalScore)
+                .ThenBy(x => x.SubmittedAt)
+                .Select((r, index) => new RankingEntryDto
+                {
+                    Rank = index + 1,
+                    SubmissionId = r.SubmissionId,
+                    TeamId = r.TeamId,
+                    TeamName = r.TeamName,
+                    CategoryName = r.CategoryName,
+                    TotalScore = r.TotalScore,
+                    SubmittedAt = r.SubmittedAt
+                })
+                .ToList();
+
+            return ServiceResult.Ok(ranking);
+        }
+
+        public async Task<ServiceResult> GetCategoryRoundRankingAsync(Guid categoryId, Guid roundId, bool requirePublished)
+        {
+            var gate = await EnsureRoundAccessibleAsync(roundId, requirePublished);
+            if (gate != null)
+                return gate;
+
+            var submissions = await _context.Submissions
+                .Include(s => s.Team)
+                .Include(s => s.Scores)
+                    .ThenInclude(sc => sc.Criteria)
+                .Where(s =>
+                    s.RoundId == roundId &&
+                    s.Team!.CategoryId == categoryId &&
+                    !s.IsWithdrawn &&
+                    s.Team.Status != TeamStatus.Eliminated)
+                .ToListAsync();
+
+            var ranking = submissions
+                .Select(s => new
+                {
+                    s.SubmissionId,
+                    TeamId = s.Team!.TeamId,
+                    s.Team.TeamName,
+                    TotalScore = CalculateWeightedScore(s.Scores),
+                    s.SubmittedAt
+                })
+                .OrderByDescending(x => x.TotalScore)
+                .ThenBy(x => x.SubmittedAt)
+                .Select((r, index) => new CategoryRankingEntryDto
+                {
+                    Rank = index + 1,
+                    SubmissionId = r.SubmissionId,
+                    TeamId = r.TeamId,
+                    TeamName = r.TeamName,
+                    TotalScore = r.TotalScore,
+                    SubmittedAt = r.SubmittedAt
+                })
+                .ToList();
+
+            return ServiceResult.Ok(ranking);
+        }
+
+        /// <summary>
+        /// Returns a failure <see cref="ServiceResult"/> when the round is missing (404) or—when
+        /// publishing is required—not yet published (403). Returns null when access is allowed.
+        /// </summary>
+        private async Task<ServiceResult?> EnsureRoundAccessibleAsync(Guid roundId, bool requirePublished)
+        {
+            var round = await _context.Rounds
+                .Where(r => r.RoundId == roundId)
+                .Select(r => new { r.RoundId, r.IsRankingPublished })
+                .FirstOrDefaultAsync();
+
+            if (round == null)
+                return ServiceResult.NotFound(new { message = "Round not found." });
+
+            if (requirePublished && !round.IsRankingPublished)
+                return ServiceResult.Forbidden(new { message = "Ranking is not published for this round." });
+
+            return null;
         }
 
         public async Task<AdvanceRoundResult> AdvanceRoundAsync(Guid roundId)

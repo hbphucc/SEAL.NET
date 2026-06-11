@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { getRequiredRoles } from "@/lib/constants";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 
@@ -51,22 +52,4 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
     </div>
   );
-}
-
-function getRequiredRoles(pathname: string): string[] | null {
-  if (pathname.startsWith("/admin")) return ["Admin"];
-  if (pathname === "/teams" || pathname.startsWith("/teams/")) return ["Admin"];
-  if (pathname.startsWith("/judge")) return ["Judge"];
-  if (pathname === "/submit") return ["Member", "TeamLeader"];
-  if (pathname === "/my-team") return ["Member", "TeamLeader"];
-  if (
-    pathname === "/members" ||
-    pathname === "/team-leaders" ||
-    pathname === "/students" ||
-    pathname === "/eliminations" ||
-    pathname === "/elimination-reasons"
-  ) {
-    return ["Admin"];
-  }
-  return null;
 }

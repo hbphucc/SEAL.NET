@@ -199,6 +199,24 @@ namespace SEAL.NET.Data
                 .Property(ti => ti.Status)
                 .HasConversion<string>();
 
+            // Persist the remaining enums as strings too, so all enum columns are
+            // stored consistently (and stay readable / reorder-proof in the database).
+            builder.Entity<Event>()
+                .Property(e => e.Status)
+                .HasConversion<string>();
+
+            builder.Entity<Round>()
+                .Property(r => r.Status)
+                .HasConversion<string>();
+
+            builder.Entity<Notification>()
+                .Property(n => n.Status)
+                .HasConversion<string>();
+
+            builder.Entity<ApplicationUser>()
+                .Property(u => u.StudentType)
+                .HasConversion<string>();
+
 
             var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
                 value => NormalizeUtc(value),

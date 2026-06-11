@@ -1,4 +1,5 @@
 import axios from "axios";
+import { isPublicRoute } from "@/lib/constants";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://localhost:5001/api";
@@ -16,12 +17,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      const publicAuthRoutes = ["/", "/login", "/register", "/unauthorized", "/leaderboard", "/events"];
-      const isPublicAuthRoute = publicAuthRoutes.some(
-        (route) => window.location.pathname === route || window.location.pathname.startsWith(`${route}/`)
-      );
-
-      if (!isPublicAuthRoute) {
+      if (!isPublicRoute(window.location.pathname)) {
         window.location.replace("/login");
       }
     }

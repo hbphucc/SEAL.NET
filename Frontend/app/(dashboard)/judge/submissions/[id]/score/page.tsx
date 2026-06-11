@@ -23,6 +23,7 @@ export default function JudgeScorePage({ params }: { params: Promise<{ id: strin
   const { data: criteria = [], isLoading: criteriaLoading } = useCriteria(submission?.round.roundId ?? "");
   const submitBulk = useSubmitBulkScores();
   const [scores, setScores] = useState<Record<string, ScoreFormValue>>({});
+  const [submitFinal, setSubmitFinal] = useState(false);
   const [formError, setFormError] = useState("");
 
   const totalWeight = useMemo(
@@ -99,6 +100,13 @@ export default function JudgeScorePage({ params }: { params: Promise<{ id: strin
       return;
     }
 
+    if (submitFinal) {
+      const confirmed = window.confirm(
+        "Submitting as final locks these scores — you will not be able to change them afterwards. Continue?"
+      );
+      if (!confirmed) return;
+    }
+
     await submitBulk.mutateAsync({
       submissionId: submission.submissionId,
       scores: payloadScores.map(({ criteriaId, scoreValue, comment }) => ({
@@ -106,6 +114,7 @@ export default function JudgeScorePage({ params }: { params: Promise<{ id: strin
         scoreValue,
         comment,
       })),
+      submitFinal,
     });
   }
 
@@ -176,14 +185,23 @@ export default function JudgeScorePage({ params }: { params: Promise<{ id: strin
         </div>
 
         {formError && <p className="px-5 pt-4 text-sm text-red-600">{formError}</p>}
-        <div className="flex justify-end border-t border-slate-100 px-5 py-4">
+        <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={submitFinal}
+              onChange={(e) => setSubmitFinal(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            Submit as final (locks these scores)
+          </label>
           <button
             type="submit"
             disabled={criteriaLoading || submitBulk.isPending}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            {submitBulk.isPending ? "Saving..." : "Submit Scores"}
+            {submitBulk.isPending ? "Saving..." : submitFinal ? "Submit Final Scores" : "Save Scores"}
           </button>
         </div>
       </form>
