@@ -9,6 +9,7 @@ using SEAL.NET.Data;
 using SEAL.NET.DTOs.Team;
 using SEAL.NET.Models.Entities;
 using SEAL.NET.Models.Enums;
+using SEAL.NET.Services.Implementations;
 
 namespace SEAL.NET.Tests.Controllers;
 
@@ -37,6 +38,13 @@ public class AdminTeamsControllerTests
             new IdentityErrorDescriber(),
             null!,
             NullLogger<UserManager<ApplicationUser>>.Instance);
+    }
+
+    private static AdminTeamsController CreateController(
+        ApplicationDbContext context,
+        UserManager<ApplicationUser> userManager)
+    {
+        return new AdminTeamsController(new AdminTeamService(context, userManager));
     }
 
     private static ApplicationUser CreateLeader(string email = "leader@example.com")
@@ -106,7 +114,7 @@ public class AdminTeamsControllerTests
         await context.SaveChangesAsync();
         var beforeStamp = await userManager.GetSecurityStampAsync(leader);
 
-        var controller = new AdminTeamsController(context, userManager);
+        var controller = CreateController(context, userManager);
         var result = await controller.ApproveTeam(team.TeamId);
 
         Assert.IsType<OkObjectResult>(result);
@@ -120,14 +128,14 @@ public class AdminTeamsControllerTests
         using var context = CreateContext();
         var userManager = CreateUserManager(context);
         var leader = CreateLeader();
-        var team = CreateTeam(leader.Id);
+        var team = CreateTeam(leader.Id, TeamStatus.Pending);
 
         await SeedTeamLeaderRoleAsync(context, userManager, leader);
         context.Teams.Add(team);
         await context.SaveChangesAsync();
         var beforeStamp = await userManager.GetSecurityStampAsync(leader);
 
-        var controller = new AdminTeamsController(context, userManager);
+        var controller = CreateController(context, userManager);
         var result = await controller.RejectTeam(team.TeamId);
 
         Assert.IsType<OkObjectResult>(result);
@@ -150,7 +158,7 @@ public class AdminTeamsControllerTests
         await context.SaveChangesAsync();
         var beforeStamp = await userManager.GetSecurityStampAsync(leader);
 
-        var controller = new AdminTeamsController(context, userManager);
+        var controller = CreateController(context, userManager);
         var result = await controller.EliminateTeam(team.TeamId, new EliminateTeamRequest { Reason = "Rule violation" });
 
         Assert.IsType<OkObjectResult>(result);
@@ -171,7 +179,7 @@ public class AdminTeamsControllerTests
         await context.SaveChangesAsync();
         var beforeStamp = await userManager.GetSecurityStampAsync(leader);
 
-        var controller = new AdminTeamsController(context, userManager);
+        var controller = CreateController(context, userManager);
         var result = await controller.DeleteTeam(team.TeamId);
 
         Assert.IsType<OkObjectResult>(result);
@@ -189,7 +197,7 @@ public class AdminTeamsControllerTests
         var userManager = CreateUserManager(context);
         var leader = CreateLeader();
         var category = new Category { CategoryId = Guid.NewGuid(), CategoryName = "Web" };
-        var targetTeam = CreateTeam(leader.Id);
+        var targetTeam = CreateTeam(leader.Id, action == "reject" ? TeamStatus.Pending : TeamStatus.Approved);
         var stillApprovedTeam = CreateTeam(leader.Id);
         targetTeam.CategoryId = category.CategoryId;
         stillApprovedTeam.CategoryId = category.CategoryId;
@@ -199,7 +207,7 @@ public class AdminTeamsControllerTests
         await context.SaveChangesAsync();
         var beforeStamp = await userManager.GetSecurityStampAsync(leader);
 
-        var controller = new AdminTeamsController(context, userManager);
+        var controller = CreateController(context, userManager);
         IActionResult result = action switch
         {
             "reject" => await controller.RejectTeam(targetTeam.TeamId),
@@ -231,7 +239,7 @@ public class AdminTeamsControllerTests
         context.AddRange(team, submission);
         await context.SaveChangesAsync();
 
-        var controller = new AdminTeamsController(context, userManager);
+        var controller = CreateController(context, userManager);
         var result = await controller.DeleteTeam(team.TeamId);
 
         Assert.IsType<BadRequestObjectResult>(result);

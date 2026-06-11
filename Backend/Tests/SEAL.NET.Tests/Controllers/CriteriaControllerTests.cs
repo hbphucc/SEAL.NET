@@ -4,6 +4,7 @@ using SEAL.NET.Controllers;
 using SEAL.NET.Data;
 using SEAL.NET.DTOs.Criteria;
 using SEAL.NET.Models.Entities;
+using SEAL.NET.Services.Implementations;
 
 namespace SEAL.NET.Tests.Controllers;
 
@@ -44,7 +45,7 @@ public class CriteriaControllerTests
         context.Criteria.AddRange(innovationCriteria, technicalCriteria);
         await context.SaveChangesAsync();
 
-        var controller = new CriteriaController(context);
+        var controller = new CriteriaController(new CriteriaService(context));
         var result = await controller.UpdateCriteria(roundId, technicalCriteria.CriteriaId, new UpdateCriteriaRequest
         {
             CriteriaName = "Innovation",

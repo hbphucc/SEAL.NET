@@ -7,6 +7,7 @@ using SEAL.NET.Data;
 using SEAL.NET.DTOs.Score;
 using SEAL.NET.Models.Entities;
 using SEAL.NET.Models.Enums;
+using SEAL.NET.Services.Implementations;
 
 namespace SEAL.NET.Tests.Controllers;
 
@@ -29,7 +30,7 @@ public class ScoresControllerTests
             new Claim(ClaimTypes.Role, "Judge")
         };
 
-        return new ScoresController(context)
+        return new ScoresController(new ScoreService(context))
         {
             ControllerContext = new ControllerContext
             {
